@@ -109,8 +109,8 @@ bot.command('tasa', async (ctx) => {
       }
     }
 
-    const updateTime = bcv ? bcv.fechaActualizacion : new Date();
-    message += `\n🕒 *Actualizado:* ${formatDate(updateTime)}`;
+    const queryTime = new Date();
+    message += `\n🕒 *Última consulta:* ${formatDate(queryTime)}`;
 
     ctx.replyWithMarkdown(message);
   } catch (error) {
@@ -340,7 +340,20 @@ bot.on('text', async (ctx) => {
  * Si detecta un cambio, actualiza la base de datos y notifica a todos los suscriptores.
  */
 cron.schedule('*/15 * * * *', async () => {
-  console.log('Verificando cambios en la tasa...');
+  // Obtener la hora actual en Venezuela para respetar el horario de descanso
+  const now = new Date();
+  const caracasHour = parseInt(now.toLocaleString('en-US', { 
+    timeZone: 'America/Caracas', 
+    hour: 'numeric', 
+    hour12: false 
+  }));
+
+  // Solo notificar entre las 7:00 AM y las 10:00 PM (22:00)
+  if (caracasHour < 7 || caracasHour >= 22) {
+    return; // Silencio total durante la madrugada
+  }
+
+  console.log('Verificando cambios en la tasa para notificaciones...');
   try {
     const rates = await getRates();
     const bcv = rates?.find(r => r.fuente === SOURCES.OFICIAL);
@@ -355,7 +368,7 @@ cron.schedule('*/15 * * * *', async () => {
 
       const { data: subscribers } = await supabase.from('subscribers').select('chat_id');
       if (subscribers?.length > 0) {
-        const message = `🔔 *Cambio en la tasa BCV*\n\n🏦 *Nuevo valor:* ${bcv.promedio} VES\n🕒 ${formatDate(bcv.fechaActualizacion)}`;
+        const message = `🔔 *¡Cambio detectado en la tasa BCV!*\n\n🏦 *Nuevo valor:* ${bcv.promedio} VES\n🕒 *Detectado:* ${formatDate(new Date())}`;
         
         for (const sub of subscribers) {
           try {
