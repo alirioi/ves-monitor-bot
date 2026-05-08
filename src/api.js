@@ -22,12 +22,15 @@ export async function getEuroRates() {
   }
 }
 
-export async function getHistoricRate(date) {
-  // El endpoint histórico en ve.dolarapi.com
+export async function getHistoricRate(date, type = 'dolares', fuente = 'oficial') {
+  // En ve.dolarapi.com, los históricos se obtienen por listas
+  // Ejemplo: /v1/historicos/dolares/oficial
   try {
-    const response = await fetch(`${BASE_URL}/dolares/historico/${date}`);
+    const response = await fetch(`${BASE_URL}/historicos/${type}/${fuente}`);
     if (!response.ok) return null;
-    return await response.json();
+    const history = await response.json();
+    // history es un array, buscamos la fecha exacta YYYY-MM-DD
+    return history.find(entry => entry.fecha === date);
   } catch (error) {
     console.error('API Historic Error:', error);
     return null;

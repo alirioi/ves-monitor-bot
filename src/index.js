@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Telegraf, Markup } from 'telegraf';
-import { getRates, getEuroRates } from './api.js';
+import { getRates, getEuroRates, getHistoricRate } from './api.js';
 
 if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'tu_telegram_bot_token_aqui') {
   console.error('Error: El BOT_TOKEN no está configurado en el archivo .env');
@@ -9,7 +9,7 @@ if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'tu_telegram_bot_token_a
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Estado temporal para conversiones (En memoria)
+// Estado temporal para conversiones e históricos (En memoria)
 const userStates = {};
 
 const formatDate = (dateStr) => {
@@ -35,7 +35,7 @@ bot.help((ctx) => {
     'Comandos disponibles:\n' +
     '/tasa - Ver las tasas actuales\n' +
     '/convertir - Calculadora de divisas\n' +
-    '/historico - Consulta histórico por fecha (Próximamente)\n' +
+    '/historico - Consulta histórico por fecha\n' +
     '/help - Mostrar este mensaje'
   );
 });
@@ -123,6 +123,12 @@ bot.action('back_to_main', (ctx) => {
   });
 });
 
+// Fase 3: Histórico
+bot.command('historico', (ctx) => {
+  userStates[ctx.from.id] = { type: 'historico' };
+  ctx.reply('📅 *Consulta Histórica*\nPor favor, ingresa la fecha que deseas consultar en formato *DD/MM/YYYY* (Ejemplo: 01/05/2024):', { parse_mode: 'Markdown' });
+});
+
 // Selección de tasa
 const askForAmount = (ctx, type, currency) => {
   ctx.editMessageText('¿Qué tasa deseas utilizar?', {
@@ -142,70 +148,106 @@ bot.action(/rate:(.+):(.+)/, (ctx) => {
   const convType = ctx.match[2]; // usd_to_ves, etc
   const userId = ctx.from.id;
 
-  userStates[userId] = { rateType, convType };
+  userStates[userId] = { type: 'conversion', rateType, convType };
 
   const fromLabel = convType.split('_')[0].toUpperCase();
   ctx.reply(`✍️ Por favor, ingresa la cantidad en *${fromLabel}* que deseas convertir:`, { parse_mode: 'Markdown' });
   ctx.answerCbQuery();
 });
 
-// Manejador de texto para procesar la cantidad
+// Manejador de texto para procesar la cantidad o la fecha
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id;
   const state = userStates[userId];
 
-  if (!state) return; // Si no está en medio de una conversión, ignorar
+  if (!state) return;
 
-  const amount = parseFloat(ctx.message.text.replace(',', '.'));
-  if (isNaN(amount)) {
-    return ctx.reply('❌ Por favor, ingresa un número válido.');
+  const text = ctx.message.text.trim();
+
+  // Caso 1: Conversión
+  if (state.type === 'conversion') {
+    const amount = parseFloat(text.replace(',', '.'));
+    if (isNaN(amount)) return ctx.reply('❌ Por favor, ingresa un número válido.');
+
+    try {
+      const isUsd = state.convType.includes('usd');
+      const rates = isUsd ? await getRates() : await getEuroRates();
+
+      if (!rates) {
+        delete userStates[userId];
+        return ctx.reply('❌ No se pudo conectar con la API de tasas.');
+      }
+
+      const rateData = rates.find(r => r.fuente === state.rateType);
+
+      if (!rateData) {
+        delete userStates[userId];
+        return ctx.reply(`❌ No se pudo obtener la tasa "${state.rateType}". Intenta de nuevo.`);
+      }
+
+      const price = rateData.promedio;
+      let result, fromSymbol, toSymbol;
+
+      if (state.convType.endsWith('to_ves')) {
+        result = amount * price;
+        fromSymbol = isUsd ? 'USD' : 'EUR';
+        toSymbol = 'VES';
+      } else {
+        result = amount / price;
+        fromSymbol = 'VES';
+        toSymbol = isUsd ? 'USD' : 'EUR';
+      }
+
+      ctx.reply(
+        `✅ *Resultado de la conversión:*\n\n` +
+        `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
+        `🔹 *Tasa:* ${price.toFixed(2)} VES (${state.rateType})\n` +
+        `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`,
+        { parse_mode: 'Markdown' }
+      );
+    } catch (error) {
+      console.error('Conversion Error:', error);
+      ctx.reply('❌ Error al realizar la conversión.');
+    }
+    delete userStates[userId];
   }
 
-  try {
-    const isUsd = state.convType.includes('usd');
-    const rates = isUsd ? await getRates() : await getEuroRates();
-    
-    if (!rates) {
-      delete userStates[userId];
-      return ctx.reply('❌ No se pudo conectar con la API de tasas.');
+  // Caso 2: Histórico
+  else if (state.type === 'historico') {
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = text.match(dateRegex);
+
+    if (!match) return ctx.reply('❌ Formato de fecha inválido. Usa *DD/MM/YYYY* (Ejemplo: 01/05/2024)', { parse_mode: 'Markdown' });
+
+    const [_, day, month, year] = match;
+    const formattedDate = `${year}-${month}-${day}`; // Formato API: YYYY-MM-DD
+
+    ctx.reply('🔍 Buscando datos históricos...');
+
+    try {
+      const [histOficial, histParalelo] = await Promise.all([
+        getHistoricRate(formattedDate, 'dolares', 'oficial'),
+        getHistoricRate(formattedDate, 'dolares', 'paralelo')
+      ]);
+
+      if (!histOficial && !histParalelo) {
+        return ctx.reply(`❌ No se encontraron datos para la fecha ${text}. Recuerda que los fines de semana y feriados pueden no tener registros. Tambien puede ser que la fecha que ingresaste sea muy antigua. Intenta con otra fecha.`);
+      }
+
+      let message = `📊 *Tasas Históricas (${text}):*\n\n`;
+      if (histOficial) message += `🏦 *Oficial (BCV):* ${histOficial.promedio.toFixed(2)} VES\n`;
+      if (histParalelo) message += `📈 *Paralelo:* ${histParalelo.promedio.toFixed(2)} VES\n`;
+
+      if (histOficial && histParalelo) {
+        const avg = (histOficial.promedio + histParalelo.promedio) / 2;
+        message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
+      }
+
+      ctx.replyWithMarkdown(message);
+    } catch (error) {
+      console.error('Historic Command Error:', error);
+      ctx.reply('❌ Ocurrió un error al consultar el histórico.');
     }
-
-    const rateData = rates.find(r => r.fuente === state.rateType);
-
-    if (!rateData) {
-      console.log('Debug - State:', state);
-      console.log('Debug - Rates available fuentes:', rates.map(r => r.fuente));
-      delete userStates[userId];
-      return ctx.reply(`❌ No se pudo obtener la tasa "${state.rateType}". Intenta de nuevo.`);
-    }
-
-    const price = rateData.promedio;
-    let result;
-    let fromSymbol, toSymbol;
-
-    if (state.convType.endsWith('to_ves')) {
-      result = amount * price;
-      fromSymbol = isUsd ? 'USD' : 'EUR';
-      toSymbol = 'VES';
-    } else {
-      result = amount / price;
-      fromSymbol = 'VES';
-      toSymbol = isUsd ? 'USD' : 'EUR';
-    }
-
-    ctx.reply(
-      `✅ *Resultado de la conversión:*\n\n` +
-      `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
-      `🔹 *Tasa:* ${price.toFixed(2)} VES (${state.rateType})\n` +
-      `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`,
-      { parse_mode: 'Markdown' }
-    );
-
-    // Limpiar estado
-    delete userStates[userId];
-  } catch (error) {
-    console.error('Conversion Error:', error);
-    ctx.reply('❌ Error al realizar la conversión.');
     delete userStates[userId];
   }
 });
