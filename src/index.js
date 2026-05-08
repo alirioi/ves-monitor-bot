@@ -222,11 +222,22 @@ const askForAmount = (ctx, type, currency) => {
   });
 };
 
-bot.action(['usd_to_ves', 'ves_to_usd'], (ctx) => askForAmount(ctx, ctx.match[0], 'USD'));
-bot.action(['eur_to_ves', 'ves_to_eur'], (ctx) => askForAmount(ctx, ctx.match[0], 'EUR'));
-bot.action(['usd_to_eur', 'eur_to_usd'], (ctx) => askForAmount(ctx, ctx.match[0], 'Cross'));
+bot.action('usd_to_eur', (ctx) => {
+  const convType = 'usd_to_eur';
+  userStates[ctx.from.id] = { type: 'conversion', rateType: SOURCES.OFICIAL, convType };
+  ctx.reply('✍️ Ingresa la cantidad en *USD* que deseas convertir a *EUR*:', { parse_mode: 'Markdown' });
+  ctx.answerCbQuery();
+});
 
-bot.action(/rate:(.+):(.+)/, (ctx) => {
+bot.action('eur_to_usd', (ctx) => {
+  const convType = 'eur_to_usd';
+  userStates[ctx.from.id] = { type: 'conversion', rateType: SOURCES.OFICIAL, convType };
+  ctx.reply('✍️ Ingresa la cantidad en *EUR* que deseas convertir a *USD*:', { parse_mode: 'Markdown' });
+  ctx.answerCbQuery();
+});
+
+bot.action('back_to_main', (ctx) => {
+
   const rateType = ctx.match[1];
   const convType = ctx.match[2];
   userStates[ctx.from.id] = { type: 'conversion', rateType, convType };
