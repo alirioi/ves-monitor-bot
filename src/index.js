@@ -271,30 +271,38 @@ bot.on('text', async (ctx) => {
       }
 
       const price = rateData.promedio;
-      let result, fromSymbol, toSymbol;
+      let result, fromSymbol, toSymbol, usedRate;
 
       if (state.convType.endsWith('to_ves')) {
         result = amount * price;
         fromSymbol = state.convType.startsWith('usd') ? 'USD' : 'EUR';
         toSymbol = 'VES';
+        usedRate = `${price.toFixed(4)} VES/${fromSymbol}`;
       } else if (state.convType.startsWith('ves')) {
         result = amount / price;
         fromSymbol = 'VES';
         toSymbol = state.convType.endsWith('usd') ? 'USD' : 'EUR';
+        usedRate = `${(1 / price).toFixed(6)} ${toSymbol}/VES`;
       } else {
+        // Conversión cruzada USD <-> EUR
         const otherRates = state.convType.startsWith('usd') ? euroRates : usdRates;
         const otherRateData = otherRates.find(r => r.fuente === state.rateType);
         if (!otherRateData) throw new Error('Other rate not found');
         
-        result = (amount * price) / otherRateData.promedio;
+        const otherPrice = otherRateData.promedio;
+        
+        // result = (amount in CURR1 * price CURR1/VES) / price CURR2/VES
+        result = (amount * price) / otherPrice;
         fromSymbol = state.convType.startsWith('usd') ? 'USD' : 'EUR';
         toSymbol = state.convType.endsWith('eur') ? 'EUR' : 'USD';
+        usedRate = `${(price / otherPrice).toFixed(6)} ${toSymbol}/${fromSymbol}`;
       }
 
       ctx.reply(
         `✅ *Resultado:*\n\n` +
         `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
         `🔹 *Tasa:* ${state.rateType.toUpperCase()}\n` +
+        `🔸 *Valor:* ${usedRate}\n` +
         `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`,
         { parse_mode: 'Markdown' }
       );
