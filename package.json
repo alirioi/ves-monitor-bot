@@ -1,0 +1,21 @@
+{
+  "name": "ves_tasa_monitor",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.18.3",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "node-cron": "^4.2.1",
+    "telegraf": "^4.16.3"
+  }
+}
