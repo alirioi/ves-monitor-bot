@@ -215,7 +215,14 @@ bot.on('text', async (ctx) => {
 
   // Caso 1: Conversión
   if (state.type === 'conversion') {
-    const amount = parseFloat(text.replace(',', '.'));
+    // Limpiar el número: 
+    // 1. Eliminar puntos que actúan como separadores de miles (ej: 80.000 -> 80000)
+    // 2. Cambiar la coma decimal por punto (ej: 10,5 -> 10.5)
+    const cleanText = text
+      .replace(/\.(?=\d{3}(?!\d))/g, '') // Quita puntos si seguidos de 3 dígitos (miles)
+      .replace(',', '.');               // Cambia coma por punto (decimal)
+    
+    const amount = parseFloat(cleanText);
     if (isNaN(amount)) return ctx.reply('❌ Por favor, ingresa un número válido.');
 
     try {
