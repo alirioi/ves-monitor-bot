@@ -88,7 +88,8 @@ bot.command('convertir', (ctx) => {
     parse_mode: 'Markdown',
     ...Markup.inlineKeyboard([
       [Markup.button.callback('💵 Dólar (USD)', 'conv_usd')],
-      [Markup.button.callback('💶 Euro (EUR)', 'conv_eur')]
+      [Markup.button.callback('💶 Euro (EUR)', 'conv_eur')],
+      [Markup.button.callback('💱 Entre USD/EUR', 'conv_cross')]
     ])
   });
 });
@@ -98,6 +99,16 @@ bot.action('conv_usd', (ctx) => {
     ...Markup.inlineKeyboard([
       [Markup.button.callback('USD ➡️ VES', 'usd_to_ves')],
       [Markup.button.callback('VES ➡️ USD', 'ves_to_usd')],
+      [Markup.button.callback('⬅️ Volver', 'back_to_main')]
+    ])
+  });
+});
+
+bot.action('conv_cross', (ctx) => {
+  ctx.editMessageText('¿Qué tipo de conversión deseas hacer?', {
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('USD ➡️ EUR', 'usd_to_eur')],
+      [Markup.button.callback('EUR ➡️ USD', 'eur_to_usd')],
       [Markup.button.callback('⬅️ Volver', 'back_to_main')]
     ])
   });
@@ -118,7 +129,8 @@ bot.action('back_to_main', (ctx) => {
     parse_mode: 'Markdown',
     ...Markup.inlineKeyboard([
       [Markup.button.callback('💵 Dólar (USD)', 'conv_usd')],
-      [Markup.button.callback('💶 Euro (EUR)', 'conv_eur')]
+      [Markup.button.callback('💶 Euro (EUR)', 'conv_eur')],
+      [Markup.button.callback('💱 Entre USD/EUR', 'conv_cross')]
     ])
   });
 });
@@ -178,6 +190,7 @@ const askForAmount = (ctx, type, currency) => {
 
 bot.action(['usd_to_ves', 'ves_to_usd'], (ctx) => askForAmount(ctx, ctx.match[0], 'USD'));
 bot.action(['eur_to_ves', 'ves_to_eur'], (ctx) => askForAmount(ctx, ctx.match[0], 'EUR'));
+bot.action(['usd_to_eur', 'eur_to_usd'], (ctx) => askForAmount(ctx, ctx.match[0], 'Cross'));
 
 bot.action(/rate:(.+):(.+)/, (ctx) => {
   const rateType = ctx.match[1]; // oficial o paralelo
@@ -224,20 +237,43 @@ bot.on('text', async (ctx) => {
       const price = rateData.promedio;
       let result, fromSymbol, toSymbol;
 
-      if (state.convType.endsWith('to_ves')) {
+      if (state.convType === 'usd_to_ves' || state.convType === 'eur_to_ves') {
         result = amount * price;
         fromSymbol = isUsd ? 'USD' : 'EUR';
         toSymbol = 'VES';
-      } else {
+      } else if (state.convType === 'ves_to_usd' || state.convType === 'ves_to_eur') {
         result = amount / price;
         fromSymbol = 'VES';
         toSymbol = isUsd ? 'USD' : 'EUR';
+      } else {
+        // Conversión cruzada USD <-> EUR
+        const otherRates = state.convType.startsWith('usd') ? await getEuroRates() : await getRates();
+        const otherRateData = otherRates.find(r => r.fuente === state.rateType);
+        
+        if (!otherRateData) {
+          delete userStates[userId];
+          return ctx.reply(`❌ No se pudo obtener la tasa comparativa para "${state.rateType}".`);
+        }
+
+        const otherPrice = otherRateData.promedio;
+        
+        if (state.convType === 'usd_to_eur') {
+          // amount USD -> amount * price VES -> (amount * price) / otherPrice EUR
+          result = (amount * price) / otherPrice;
+          fromSymbol = 'USD';
+          toSymbol = 'EUR';
+        } else {
+          // amount EUR -> amount * price VES -> (amount * price) / otherPrice USD
+          result = (amount * price) / otherPrice;
+          fromSymbol = 'EUR';
+          toSymbol = 'USD';
+        }
       }
 
       ctx.reply(
         `✅ *Resultado de la conversión:*\n\n` +
         `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
-        `🔹 *Tasa:* ${price.toFixed(2)} VES (${state.rateType})\n` +
+        `🔹 *Tasa:* ${state.rateType.toUpperCase()}\n` +
         `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`,
         { parse_mode: 'Markdown' }
       );
