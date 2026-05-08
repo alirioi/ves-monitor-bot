@@ -3,6 +3,7 @@ import { Telegraf, Markup } from 'telegraf';
 import { getRates, getEuroRates, getHistoricRate } from './api.js';
 import supabase from './db.js';
 import cron from 'node-cron';
+import http from 'http';
 
 if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'tu_telegram_bot_token_aqui') {
   console.error('Error: El BOT_TOKEN no está configurado en el archivo .env');
@@ -355,3 +356,21 @@ bot.launch().then(() => {
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+// Fase 5: Servidor HTTP para Anti-Sleep (Render)
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/ping') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('pong');
+    return;
+  }
+  
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('VES Tasa Monitor is running');
+});
+
+server.listen(PORT, () => {
+  console.log(`🌍 Servidor HTTP escuchando en el puerto ${PORT} (para pings anti-sleep)`);
+});
