@@ -52,11 +52,11 @@ bot.command('tasa', async (ctx) => {
     let message = '📊 *Tasas del Día:*\n\n';
 
     message += '💵 *Dólar:*\n';
-    if (bcv) message += `🏦 *Oficial (BCV):* ${bcv.promedio.toFixed(2)} VES\n`;
-    if (paralelo) message += `📈 *Paralelo:* ${paralelo.promedio.toFixed(2)} VES\n`;
+    if (bcv) message += `🏦 *Oficial (BCV):* ${bcv.promedio} VES\n`;
+    if (paralelo) message += `📈 *Paralelo:* ${paralelo.promedio} VES\n`;
     if (bcv && paralelo) {
       const avg = (bcv.promedio + paralelo.promedio) / 2;
-      message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
+      message += `⚖️ *Promedio:* ${avg} VES\n`;
     }
 
     if (euroRates) {
@@ -64,11 +64,11 @@ bot.command('tasa', async (ctx) => {
       const euroParalelo = euroRates.find(r => r.fuente === 'paralelo');
 
       message += '\n💶 *Euro:*\n';
-      if (euroBcv) message += `🏦 *Oficial (BCV):* ${euroBcv.promedio.toFixed(2)} VES\n`;
-      if (euroParalelo) message += `📈 *Paralelo:* ${euroParalelo.promedio.toFixed(2)} VES\n`;
+      if (euroBcv) message += `🏦 *Oficial (BCV):* ${euroBcv.promedio} VES\n`;
+      if (euroParalelo) message += `📈 *Paralelo:* ${euroParalelo.promedio} VES\n`;
       if (euroBcv && euroParalelo) {
         const euroAvg = (euroBcv.promedio + euroParalelo.promedio) / 2;
-        message += `⚖️ *Promedio:* ${euroAvg.toFixed(2)} VES\n`;
+        message += `⚖️ *Promedio:* ${euroAvg} VES\n`;
       }
     }
 
@@ -314,12 +314,12 @@ bot.on('text', async (ctx) => {
       }
 
       let message = `📊 *Tasas Históricas (${text}):*\n\n`;
-      if (histOficial) message += `🏦 *Oficial (BCV):* ${histOficial.promedio.toFixed(2)} VES\n`;
-      if (histParalelo) message += `📈 *Paralelo:* ${histParalelo.promedio.toFixed(2)} VES\n`;
+      if (histOficial) message += `🏦 *Oficial (BCV):* ${histOficial.promedio} VES\n`;
+      if (histParalelo) message += `📈 *Paralelo:* ${histParalelo.promedio} VES\n`;
 
       if (histOficial && histParalelo) {
         const avg = (histOficial.promedio + histParalelo.promedio) / 2;
-        message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
+        message += `⚖️ *Promedio:* ${avg} VES\n`;
       }
 
       ctx.replyWithMarkdown(message);
@@ -368,7 +368,7 @@ cron.schedule('*/15 * * * *', async () => {
 
       if (subscribers && subscribers.length > 0) {
         const message = `🔔 *¡Atención! La tasa oficial ha cambiado*\n\n` +
-                        `🏦 *Nuevo valor (BCV):* ${bcv.promedio.toFixed(2)} VES\n` +
+                        `🏦 *Nuevo valor (BCV):* ${bcv.promedio} VES\n` +
                         `🕒 *Actualizado:* ${formatDate(bcv.fechaActualizacion)}\n\n` +
                         `Usa /tasa para ver el detalle completo.`;
 
