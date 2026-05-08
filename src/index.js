@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import { Telegraf, Markup } from 'telegraf';
 import { getRates, getEuroRates, getHistoricRate } from './api.js';
+import supabase from './db.js';
+import cron from 'node-cron';
 
 if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'tu_telegram_bot_token_aqui') {
   console.error('Error: El BOT_TOKEN no está configurado en el archivo .env');
@@ -36,6 +38,8 @@ bot.help((ctx) => {
     '/tasa - Ver las tasas actuales\n' +
     '/convertir - Calculadora de divisas\n' +
     '/historico - Consulta histórico por fecha\n' +
+    '/suscribir - Recibir alertas cuando la tasa cambie\n' +
+    '/desuscribir - Dejar de recibir alertas\n' +
     '/help - Mostrar este mensaje'
   );
 });
@@ -121,6 +125,42 @@ bot.action('back_to_main', (ctx) => {
       [Markup.button.callback('💶 Euro (EUR)', 'conv_eur')]
     ])
   });
+});
+
+// Fase 4: Suscripciones y Notificaciones
+bot.command('suscribir', async (ctx) => {
+  const chatId = ctx.from.id;
+  
+  try {
+    const { error } = await supabase
+      .from('subscribers')
+      .upsert({ chat_id: chatId });
+
+    if (error) throw error;
+
+    ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie (especialmente a las 9am y 1pm).');
+  } catch (error) {
+    console.error('Error al suscribir:', error);
+    ctx.reply('❌ Ocurrió un error al intentar suscribirte. Intenta de nuevo más tarde.');
+  }
+});
+
+bot.command('desuscribir', async (ctx) => {
+  const chatId = ctx.from.id;
+  
+  try {
+    const { error } = await supabase
+      .from('subscribers')
+      .delete()
+      .eq('chat_id', chatId);
+
+    if (error) throw error;
+
+    ctx.reply('🔔 Te has desuscrito. Ya no recibirás notificaciones automáticas.');
+  } catch (error) {
+    console.error('Error al desuscribir:', error);
+    ctx.reply('❌ Ocurrió un error al intentar desuscribirte.');
+  }
 });
 
 // Fase 3: Histórico
@@ -249,6 +289,62 @@ bot.on('text', async (ctx) => {
       ctx.reply('❌ Ocurrió un error al consultar el histórico.');
     }
     delete userStates[userId];
+  }
+});
+
+// Lógica de Notificaciones Automáticas (Cron Job)
+// Se ejecuta cada 15 minutos para verificar cambios
+cron.schedule('*/15 * * * *', async () => {
+  console.log('🔄 Verificando cambios en la tasa para notificaciones...');
+  
+  try {
+    const rates = await getRates();
+    if (!rates) return;
+
+    const bcv = rates.find(r => r.fuente === 'oficial');
+    if (!bcv) return;
+
+    // Obtener la última tasa guardada de Supabase
+    const { data: config } = await supabase
+      .from('bot_config')
+      .select('value')
+      .eq('key', 'last_bcv_rate')
+      .single();
+
+    const lastRate = config ? parseFloat(config.value) : 0;
+
+    // Si la tasa cambió
+    if (bcv.promedio !== lastRate) {
+      console.log(`📢 ¡Cambio detectado! ${lastRate} -> ${bcv.promedio}. Notificando...`);
+
+      // Guardar la nueva tasa
+      await supabase
+        .from('bot_config')
+        .upsert({ key: 'last_bcv_rate', value: bcv.promedio.toString() });
+
+      // Obtener todos los suscriptores
+      const { data: subscribers } = await supabase
+        .from('subscribers')
+        .select('chat_id');
+
+      if (subscribers && subscribers.length > 0) {
+        const message = `🔔 *¡Atención! La tasa oficial ha cambiado*\n\n` +
+                        `🏦 *Nuevo valor (BCV):* ${bcv.promedio.toFixed(2)} VES\n` +
+                        `🕒 *Actualizado:* ${formatDate(bcv.fechaActualizacion)}\n\n` +
+                        `Usa /tasa para ver el detalle completo.`;
+
+        // Enviar a todos (con un pequeño delay para evitar spam/bloqueo de Telegram)
+        for (const sub of subscribers) {
+          try {
+            await bot.telegram.sendMessage(sub.chat_id, message, { parse_mode: 'Markdown' });
+          } catch (err) {
+            console.error(`Error enviando a ${sub.chat_id}:`, err.message);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error en el cron de notificaciones:', error);
   }
 });
 
