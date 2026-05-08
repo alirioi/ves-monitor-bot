@@ -15,11 +15,27 @@ import http from 'http';
 const bot = new Telegraf(config.botToken);
 
 /** 
+ * Constantes para las fuentes de tasas.
+ * @enum {string}
+ */
+const SOURCES = {
+  OFICIAL: 'oficial',
+  PARALELO: 'paralelo'
+};
+
+/** 
  * Estado temporal para conversiones e históricos.
  * Almacena información por ID de usuario para procesos multi-paso.
  * @type {Object<number, Object>} 
  */
 const userStates = {};
+
+/**
+ * Función auxiliar para pausar la ejecución (para evitar rate-limits).
+ * @param {number} ms - Milisegundos a esperar.
+ * @returns {Promise<void>}
+ */
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Formatea una cadena de fecha a un formato legible en español de Venezuela.
@@ -67,8 +83,8 @@ bot.command('tasa', async (ctx) => {
 
     if (!usdRates) return ctx.reply('Lo siento, no pude obtener las tasas en este momento.');
 
-    const bcv = usdRates.find(r => r.fuente === 'oficial');
-    const paralelo = usdRates.find(r => r.fuente === 'paralelo');
+    const bcv = usdRates.find(r => r.fuente === SOURCES.OFICIAL);
+    const paralelo = usdRates.find(r => r.fuente === SOURCES.PARALELO);
 
     let message = '📊 *Tasas del Día:*\n\n';
 
@@ -81,8 +97,8 @@ bot.command('tasa', async (ctx) => {
     }
 
     if (euroRates) {
-      const euroBcv = euroRates.find(r => r.fuente === 'oficial');
-      const euroParalelo = euroRates.find(r => r.fuente === 'paralelo');
+      const euroBcv = euroRates.find(r => r.fuente === SOURCES.OFICIAL);
+      const euroParalelo = euroRates.find(r => r.fuente === SOURCES.PARALELO);
 
       message += '\n💶 *Euro:*\n';
       if (euroBcv) message += `🏦 *Oficial (BCV):* ${euroBcv.promedio} VES\n`;
@@ -118,33 +134,22 @@ bot.command('convertir', (ctx) => {
 /** Manejador del comando /suscribir. Registra al usuario en Supabase para alertas. */
 bot.command('suscribir', async (ctx) => {
   const chatId = ctx.from.id;
-  
   try {
-    const { error } = await supabase
-      .from('subscribers')
-      .upsert({ chat_id: chatId });
-
+    const { error } = await supabase.from('subscribers').upsert({ chat_id: chatId });
     if (error) throw error;
-
-    ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie (especialmente a las 9am y 1pm).');
+    ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie.');
   } catch (error) {
     console.error('Error al suscribir:', error);
-    ctx.reply('❌ Ocurrió un error al intentar suscribirte. Intenta de nuevo más tarde.');
+    ctx.reply('❌ Ocurrió un error al intentar suscribirte.');
   }
 });
 
 /** Manejador del comando /desuscribir. Elimina al usuario de las alertas. */
 bot.command('desuscribir', async (ctx) => {
   const chatId = ctx.from.id;
-  
   try {
-    const { error } = await supabase
-      .from('subscribers')
-      .delete()
-      .eq('chat_id', chatId);
-
+    const { error } = await supabase.from('subscribers').delete().eq('chat_id', chatId);
     if (error) throw error;
-
     ctx.reply('🔔 Te has desuscrito. Ya no recibirás notificaciones automáticas.');
   } catch (error) {
     console.error('Error al desuscribir:', error);
@@ -155,7 +160,7 @@ bot.command('desuscribir', async (ctx) => {
 /** Manejador del comando /historico. Inicia el flujo de consulta histórica. */
 bot.command('historico', (ctx) => {
   userStates[ctx.from.id] = { type: 'historico' };
-  ctx.reply('📅 *Consulta Histórica*\nPor favor, ingresa la fecha que deseas consultar en formato *DD/MM/YYYY* (Ejemplo: 01/05/2024):', { parse_mode: 'Markdown' });
+  ctx.reply('📅 *Consulta Histórica*\nPor favor, ingresa la fecha (DD/MM/YYYY):', { parse_mode: 'Markdown' });
 });
 
 // --- Manejadores de Acciones de Teclado Inline ---
@@ -170,21 +175,21 @@ bot.action('conv_usd', (ctx) => {
   });
 });
 
-bot.action('conv_cross', (ctx) => {
-  ctx.editMessageText('¿Qué tipo de conversión deseas hacer?', {
-    ...Markup.inlineKeyboard([
-      [Markup.button.callback('USD ➡️ EUR', 'usd_to_eur')],
-      [Markup.button.callback('EUR ➡️ USD', 'eur_to_usd')],
-      [Markup.button.callback('⬅️ Volver', 'back_to_main')]
-    ])
-  });
-});
-
 bot.action('conv_eur', (ctx) => {
   ctx.editMessageText('¿Qué tipo de conversión deseas hacer?', {
     ...Markup.inlineKeyboard([
       [Markup.button.callback('EUR ➡️ VES', 'eur_to_ves')],
       [Markup.button.callback('VES ➡️ EUR', 'ves_to_eur')],
+      [Markup.button.callback('⬅️ Volver', 'back_to_main')]
+    ])
+  });
+});
+
+bot.action('conv_cross', (ctx) => {
+  ctx.editMessageText('¿Qué tipo de conversión deseas hacer?', {
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('USD ➡️ EUR', 'usd_to_eur')],
+      [Markup.button.callback('EUR ➡️ USD', 'eur_to_usd')],
       [Markup.button.callback('⬅️ Volver', 'back_to_main')]
     ])
   });
@@ -210,8 +215,8 @@ bot.action('back_to_main', (ctx) => {
 const askForAmount = (ctx, type, currency) => {
   ctx.editMessageText('¿Qué tasa deseas utilizar?', {
     ...Markup.inlineKeyboard([
-      [Markup.button.callback('🏦 Oficial (BCV)', `rate:oficial:${type}`)],
-      [Markup.button.callback('📈 Paralelo', `rate:paralelo:${type}`)],
+      [Markup.button.callback('🏦 Oficial (BCV)', `rate:${SOURCES.OFICIAL}:${type}`)],
+      [Markup.button.callback('📈 Paralelo', `rate:${SOURCES.PARALELO}:${type}`)],
       [Markup.button.callback('⬅️ Volver', `conv_${currency.toLowerCase()}`)]
     ])
   });
@@ -222,87 +227,72 @@ bot.action(['eur_to_ves', 'ves_to_eur'], (ctx) => askForAmount(ctx, ctx.match[0]
 bot.action(['usd_to_eur', 'eur_to_usd'], (ctx) => askForAmount(ctx, ctx.match[0], 'Cross'));
 
 bot.action(/rate:(.+):(.+)/, (ctx) => {
-  const rateType = ctx.match[1]; // oficial o paralelo
-  const convType = ctx.match[2]; // usd_to_ves, etc
-  const userId = ctx.from.id;
-
-  userStates[userId] = { type: 'conversion', rateType, convType };
-
+  const rateType = ctx.match[1];
+  const convType = ctx.match[2];
+  userStates[ctx.from.id] = { type: 'conversion', rateType, convType };
   const fromLabel = convType.split('_')[0].toUpperCase();
-  ctx.reply(`✍️ Por favor, ingresa la cantidad en *${fromLabel}* que deseas convertir:`, { parse_mode: 'Markdown' });
+  ctx.reply(`✍️ Ingresa la cantidad en *${fromLabel}*:`, { parse_mode: 'Markdown' });
   ctx.answerCbQuery();
 });
 
-// --- Manejador de Mensajes de Texto ---
+// --- Procesamiento de Mensajes ---
 
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id;
   const state = userStates[userId];
-
   if (!state) return;
 
   const text = ctx.message.text.trim();
 
   // Caso 1: Flujo de Conversión
   if (state.type === 'conversion') {
-    const cleanText = text
-      .replace(/\.(?=\d{3}(?!\d))/g, '')
-      .replace(',', '.');
-    
+    const cleanText = text.replace(/\.(?=\d{3}(?!\d))/g, '').replace(',', '.');
     const amount = parseFloat(cleanText);
     if (isNaN(amount)) return ctx.reply('❌ Por favor, ingresa un número válido.');
 
     try {
-      const isUsd = state.convType.includes('usd');
-      const rates = isUsd ? await getRates() : await getEuroRates();
-
-      if (!rates) {
-        delete userStates[userId];
-        return ctx.reply('❌ No se pudo conectar con la API de tasas.');
+      const isCross = state.convType.includes('eur') && state.convType.includes('usd');
+      let usdRates, euroRates;
+      
+      if (isCross) {
+        [usdRates, euroRates] = await Promise.all([getRates(), getEuroRates()]);
+      } else {
+        const isUsd = state.convType.includes('usd');
+        usdRates = isUsd ? await getRates() : null;
+        euroRates = !isUsd ? await getEuroRates() : null;
       }
 
-      const rateData = rates.find(r => r.fuente === state.rateType);
+      const currentRates = usdRates || euroRates;
+      const rateData = currentRates.find(r => r.fuente === state.rateType);
 
       if (!rateData) {
         delete userStates[userId];
-        return ctx.reply(`❌ No se pudo obtener la tasa "${state.rateType}". Intenta de nuevo.`);
+        return ctx.reply('❌ No se pudo obtener la tasa seleccionada.');
       }
 
       const price = rateData.promedio;
       let result, fromSymbol, toSymbol;
 
-      if (state.convType === 'usd_to_ves' || state.convType === 'eur_to_ves') {
+      if (state.convType.endsWith('to_ves')) {
         result = amount * price;
-        fromSymbol = isUsd ? 'USD' : 'EUR';
+        fromSymbol = state.convType.startsWith('usd') ? 'USD' : 'EUR';
         toSymbol = 'VES';
-      } else if (state.convType === 'ves_to_usd' || state.convType === 'ves_to_eur') {
+      } else if (state.convType.startsWith('ves')) {
         result = amount / price;
         fromSymbol = 'VES';
-        toSymbol = isUsd ? 'USD' : 'EUR';
+        toSymbol = state.convType.endsWith('usd') ? 'USD' : 'EUR';
       } else {
-        const otherRates = state.convType.startsWith('usd') ? await getEuroRates() : await getRates();
+        const otherRates = state.convType.startsWith('usd') ? euroRates : usdRates;
         const otherRateData = otherRates.find(r => r.fuente === state.rateType);
+        if (!otherRateData) throw new Error('Other rate not found');
         
-        if (!otherRateData) {
-          delete userStates[userId];
-          return ctx.reply(`❌ No se pudo obtener la tasa comparativa para "${state.rateType}".`);
-        }
-
-        const otherPrice = otherRateData.promedio;
-        
-        if (state.convType === 'usd_to_eur') {
-          result = (amount * price) / otherPrice;
-          fromSymbol = 'USD';
-          toSymbol = 'EUR';
-        } else {
-          result = (amount * price) / otherPrice;
-          fromSymbol = 'EUR';
-          toSymbol = 'USD';
-        }
+        result = (amount * price) / otherRateData.promedio;
+        fromSymbol = state.convType.startsWith('usd') ? 'USD' : 'EUR';
+        toSymbol = state.convType.endsWith('eur') ? 'EUR' : 'USD';
       }
 
       ctx.reply(
-        `✅ *Resultado de la conversión:*\n\n` +
+        `✅ *Resultado:*\n\n` +
         `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
         `🔹 *Tasa:* ${state.rateType.toUpperCase()}\n` +
         `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`,
@@ -317,92 +307,60 @@ bot.on('text', async (ctx) => {
 
   // Caso 2: Flujo de Consulta Histórica
   else if (state.type === 'historico') {
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    const match = text.match(dateRegex);
+    const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return ctx.reply('❌ Formato inválido. Usa DD/MM/YYYY');
 
-    if (!match) return ctx.reply('❌ Formato de fecha inválido. Usa *DD/MM/YYYY* (Ejemplo: 01/05/2024)', { parse_mode: 'Markdown' });
-
-    const [_, day, month, year] = match;
-    const formattedDate = `${year}-${month}-${day}`;
-
-    ctx.reply('🔍 Buscando datos históricos...');
+    const formattedDate = `${match[3]}-\ ${match[2]}-\ ${match[1]}`;
+    ctx.reply('🔍 Buscando...');
 
     try {
       const [histOficial, histParalelo] = await Promise.all([
-        getHistoricRate(formattedDate, 'dolares', 'oficial'),
-        getHistoricRate(formattedDate, 'dolares', 'paralelo')
+        getHistoricRate(formattedDate, 'dolares', SOURCES.OFICIAL),
+        getHistoricRate(formattedDate, 'dolares', SOURCES.PARALELO)
       ]);
 
-      if (!histOficial && !histParalelo) {
-        return ctx.reply(`❌ No se encontraron datos para la fecha ${text}. Recuerda que los fines de semana y feriados pueden no tener registros. Tambien puede ser que la fecha que ingresaste sea muy antigua. Intenta con otra fecha.`);
-      }
+      if (!histOficial && !histParalelo) return ctx.reply('❌ No hay datos para esa fecha.');
 
-      let message = `📊 *Tasas Históricas (${text}):*\n\n`;
-      if (histOficial) message += `🏦 *Oficial (BCV):* ${histOficial.promedio} VES\n`;
+      let message = `📊 *Tasas (${text}):*\n\n`;
+      if (histOficial) message += `🏦 *BCV:* ${histOficial.promedio} VES\n`;
       if (histParalelo) message += `📈 *Paralelo:* ${histParalelo.promedio.toFixed(2)} VES\n`;
-      
-      if (histOficial && histParalelo) {
-        const avg = (histOficial.promedio + histParalelo.promedio) / 2;
-        message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
-      }
-
       ctx.replyWithMarkdown(message);
     } catch (error) {
-      console.error('Historic Command Error:', error);
-      ctx.reply('❌ Ocurrió un error al consultar el histórico.');
+      console.error('Historic Error:', error);
+      ctx.reply('❌ Error al consultar el histórico.');
     }
     delete userStates[userId];
   }
 });
 
-// --- Lógica de Notificaciones Automáticas (Cron Job) ---
+// --- Notificaciones Automáticas (Cron Job) ---
 
 /**
  * Tarea programada: Verifica cambios en la tasa oficial cada 15 minutos.
  * Si detecta un cambio, actualiza la base de datos y notifica a todos los suscriptores.
  */
 cron.schedule('*/15 * * * *', async () => {
-  console.log('Verificando cambios en la tasa para notificaciones...');
-  
+  console.log('Verificando cambios en la tasa...');
   try {
     const rates = await getRates();
-    if (!rates) return;
-
-    const bcv = rates.find(r => r.fuente === 'oficial');
+    const bcv = rates?.find(r => r.fuente === SOURCES.OFICIAL);
     if (!bcv) return;
 
-    // Obtener la última tasa guardada de Supabase
-    const { data: configData } = await supabase
-      .from('bot_config')
-      .select('value')
-      .eq('key', 'last_bcv_rate')
-      .single();
-
+    const { data: configData } = await supabase.from('bot_config').select('value').eq('key', 'last_bcv_rate').single();
     const lastRate = configData ? parseFloat(configData.value) : 0;
 
-    // Si la tasa cambió
     if (bcv.promedio !== lastRate) {
-      console.log(`¡Cambio detectado! ${lastRate} -> ${bcv.promedio}. Notificando...`);
+      console.log(`Cambio detectado: ${lastRate} -> ${bcv.promedio}`);
+      await supabase.from('bot_config').upsert({ key: 'last_bcv_rate', value: bcv.promedio.toString() });
 
-      // Guardar la nueva tasa
-      await supabase
-        .from('bot_config')
-        .upsert({ key: 'last_bcv_rate', value: bcv.promedio.toString() });
-
-      // Obtener todos los suscriptores
-      const { data: subscribers } = await supabase
-        .from('subscribers')
-        .select('chat_id');
-
-      if (subscribers && subscribers.length > 0) {
-        const message = `🔔 *¡Atención! La tasa oficial ha cambiado*\n\n` +
-                        `🏦 *Nuevo valor (BCV):* ${bcv.promedio} VES\n` +
-                        `🕒 *Actualizado:* ${formatDate(bcv.fechaActualizacion)}\n\n` +
-                        `Usa /tasa para ver el detalle completo.`;
-
+      const { data: subscribers } = await supabase.from('subscribers').select('chat_id');
+      if (subscribers?.length > 0) {
+        const message = `🔔 *Cambio en la tasa BCV*\n\n🏦 *Nuevo valor:* ${bcv.promedio} VES\n🕒 ${formatDate(bcv.fechaActualizacion)}`;
+        
         for (const sub of subscribers) {
           try {
             await bot.telegram.sendMessage(sub.chat_id, message, { parse_mode: 'Markdown' });
+            await delay(50);
           } catch (err) {
             console.error(`Error enviando a ${sub.chat_id}:`, err.message);
           }
@@ -410,46 +368,21 @@ cron.schedule('*/15 * * * *', async () => {
       }
     }
   } catch (error) {
-    console.error('Error en el cron de notificaciones:', error);
+    console.error('Cron Error:', error);
   }
 });
 
-// Configuración del menú de comandos en la interfaz de Telegram
-bot.telegram.setMyCommands([
-  { command: 'tasa', description: '📊 Ver tasas del día' },
-  { command: 'convertir', description: '🧮 Calculadora de divisas' },
-  { command: 'historico', description: '📅 Consultar fecha pasada' },
-  { command: 'suscribir', description: '🔔 Recibir alertas de cambios' },
-  { command: 'desuscribir', description: '🔕 Dejar de recibir alertas' },
-  { command: 'help', description: '❓ Ver ayuda' }
-]);
+bot.launch().then(() => console.log('Bot en línea'));
 
-// Lanzamiento del bot
-bot.launch().then(() => {
-  console.log('Bot en línea');
-});
-
-// Manejo de parada suave
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
-// --- Servidor HTTP para Anti-Sleep (Render) ---
-
 /**
- * Servidor HTTP minimalista para mantener el servicio activo en Render
- * respondiendo a pings en la ruta /ping.
+ * Servidor HTTP minimalista para mantener el servicio activo en Render.
  */
 const server = http.createServer((req, res) => {
-  if (req.url === '/ping') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('pong');
-    return;
-  }
-  
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('VES Tasa Monitor is running');
+  res.end(req.url === '/ping' ? 'pong' : 'VES Tasa Monitor is running');
 });
 
-server.listen(config.port, () => {
-  console.log(`Servidor HTTP escuchando en el puerto ${config.port} (para pings anti-sleep)`);
-});
+server.listen(config.port, () => console.log(`Servidor escuchando en el puerto ${config.port}`));
