@@ -1,7 +1,18 @@
+/**
+ * @fileoverview Funciones para interactuar con la API de tasas de cambio (DolarAPI).
+ * Proporciona métodos para obtener tasas actuales de dólar, euro y datos históricos.
+ */
+
 import { config } from './config.js';
 
+/** URL base de la API obtenida de la configuración. */
 const BASE_URL = config.apiUrl;
 
+/**
+ * Obtiene las tasas actuales para el dólar estadounidense.
+ * @async
+ * @returns {Promise<Array|null>} Lista de tasas o null si ocurre un error.
+ */
 export async function getRates() {
   try {
     const response = await fetch(`${BASE_URL}/dolares`);
@@ -13,6 +24,11 @@ export async function getRates() {
   }
 }
 
+/**
+ * Obtiene las tasas actuales para el euro.
+ * @async
+ * @returns {Promise<Array|null>} Lista de tasas o null si ocurre un error.
+ */
 export async function getEuroRates() {
   try {
     const response = await fetch(`${BASE_URL}/euros`);
@@ -24,6 +40,14 @@ export async function getEuroRates() {
   }
 }
 
+/**
+ * Obtiene la tasa histórica para una fecha y fuente específica.
+ * @async
+ * @param {string} date - Fecha en formato YYYY-MM-DD.
+ * @param {string} [type='dolares'] - Tipo de moneda ('dolares' o 'euros').
+ * @param {string} [fuente='oficial'] - Fuente de la tasa ('oficial' o 'paralelo').
+ * @returns {Promise<Object|null>} El registro de la tasa para esa fecha o null si no se encuentra.
+ */
 export async function getHistoricRate(date, type = 'dolares', fuente = 'oficial') {
   // En ve.dolarapi.com, los históricos se obtienen por listas
   // Ejemplo: /v1/historicos/dolares/oficial

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Punto de entrada principal para el bot VES Tasa Monitor.
+ * Maneja comandos, acciones de teclado inline, conversiones de divisas,
+ * suscripciones y notificaciones automáticas mediante cron.
+ */
+
 import { Telegraf, Markup } from 'telegraf';
 import { getRates, getEuroRates, getHistoricRate } from './api.js';
 import supabase from './db.js';
@@ -5,11 +11,21 @@ import { config } from './config.js';
 import cron from 'node-cron';
 import http from 'http';
 
+/** Instancia principal del bot de Telegram. */
 const bot = new Telegraf(config.botToken);
 
-// Estado temporal para conversiones e históricos (En memoria)
+/** 
+ * Estado temporal para conversiones e históricos.
+ * Almacena información por ID de usuario para procesos multi-paso.
+ * @type {Object<number, Object>} 
+ */
 const userStates = {};
 
+/**
+ * Formatea una cadena de fecha a un formato legible en español de Venezuela.
+ * @param {string} dateStr - Cadena de fecha ISO o compatible con Date.
+ * @returns {string} Fecha formateada o 'Desconocida'.
+ */
 const formatDate = (dateStr) => {
   if (!dateStr) return 'Desconocida';
   const date = new Date(dateStr);
@@ -24,10 +40,14 @@ const formatDate = (dateStr) => {
   });
 };
 
+// --- Manejadores de Comandos ---
+
+/** Manejador del comando /start. */
 bot.start((ctx) => {
   ctx.reply('¡Hola! Bienvenido a *VES Tasa Monitor* 🇻🇪\n\nTu asistente para consultar el valor del dólar y euro en tiempo real.\n\nUsa /tasa para ver los precios actuales o /help para ver todos los comandos.', { parse_mode: 'Markdown' });
 });
 
+/** Manejador del comando /help. */
 bot.help((ctx) => {
   ctx.reply(
     'Comandos disponibles:\n' +
@@ -40,6 +60,7 @@ bot.help((ctx) => {
   );
 });
 
+/** Manejador del comando /tasa. Obtiene y muestra los precios actuales. */
 bot.command('tasa', async (ctx) => {
   try {
     const [usdRates, euroRates] = await Promise.all([getRates(), getEuroRates()]);
@@ -64,11 +85,11 @@ bot.command('tasa', async (ctx) => {
       const euroParalelo = euroRates.find(r => r.fuente === 'paralelo');
 
       message += '\n💶 *Euro:*\n';
-      if (euroBcv) message += `🏦 *Oficial (BCV):* ${euroBcv.promedio} VES\n`;
-      if (euroParalelo) message += `📈 *Paralelo:* ${euroParalelo.promedio} VES\n`;
+      if (euroBcv) message += `🏦 *Oficial (BCV):* ${euroBcv.promedio.toFixed(2)} VES\n`;
+      if (euroParalelo) message += `📈 *Paralelo:* ${euroParalelo.promedio.toFixed(2)} VES\n`;
       if (euroBcv && euroParalelo) {
         const euroAvg = (euroBcv.promedio + euroParalelo.promedio) / 2;
-        message += `⚖️ *Promedio:* ${euroAvg} VES\n`;
+        message += `⚖️ *Promedio:* ${euroAvg.toFixed(2)} VES\n`;
       }
     }
 
@@ -82,7 +103,7 @@ bot.command('tasa', async (ctx) => {
   }
 });
 
-// Fase 2: Conversor
+/** Manejador del comando /convertir. Muestra el menú de selección de moneda. */
 bot.command('convertir', (ctx) => {
   ctx.reply('🧮 *Calculadora de Divisas*\nSelecciona la moneda que deseas convertir:', {
     parse_mode: 'Markdown',
@@ -93,6 +114,51 @@ bot.command('convertir', (ctx) => {
     ])
   });
 });
+
+/** Manejador del comando /suscribir. Registra al usuario en Supabase para alertas. */
+bot.command('suscribir', async (ctx) => {
+  const chatId = ctx.from.id;
+  
+  try {
+    const { error } = await supabase
+      .from('subscribers')
+      .upsert({ chat_id: chatId });
+
+    if (error) throw error;
+
+    ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie (especialmente a las 9am y 1pm).');
+  } catch (error) {
+    console.error('Error al suscribir:', error);
+    ctx.reply('❌ Ocurrió un error al intentar suscribirte. Intenta de nuevo más tarde.');
+  }
+});
+
+/** Manejador del comando /desuscribir. Elimina al usuario de las alertas. */
+bot.command('desuscribir', async (ctx) => {
+  const chatId = ctx.from.id;
+  
+  try {
+    const { error } = await supabase
+      .from('subscribers')
+      .delete()
+      .eq('chat_id', chatId);
+
+    if (error) throw error;
+
+    ctx.reply('🔔 Te has desuscrito. Ya no recibirás notificaciones automáticas.');
+  } catch (error) {
+    console.error('Error al desuscribir:', error);
+    ctx.reply('❌ Ocurrió un error al intentar desuscribirte.');
+  }
+});
+
+/** Manejador del comando /historico. Inicia el flujo de consulta histórica. */
+bot.command('historico', (ctx) => {
+  userStates[ctx.from.id] = { type: 'historico' };
+  ctx.reply('📅 *Consulta Histórica*\nPor favor, ingresa la fecha que deseas consultar en formato *DD/MM/YYYY* (Ejemplo: 01/05/2024):', { parse_mode: 'Markdown' });
+});
+
+// --- Manejadores de Acciones de Teclado Inline ---
 
 bot.action('conv_usd', (ctx) => {
   ctx.editMessageText('¿Qué tipo de conversión deseas hacer?', {
@@ -135,49 +201,12 @@ bot.action('back_to_main', (ctx) => {
   });
 });
 
-// Fase 4: Suscripciones y Notificaciones
-bot.command('suscribir', async (ctx) => {
-  const chatId = ctx.from.id;
-  
-  try {
-    const { error } = await supabase
-      .from('subscribers')
-      .upsert({ chat_id: chatId });
-
-    if (error) throw error;
-
-    ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie (especialmente a las 9am y 1pm).');
-  } catch (error) {
-    console.error('Error al suscribir:', error);
-    ctx.reply('❌ Ocurrió un error al intentar suscribirte. Intenta de nuevo más tarde.');
-  }
-});
-
-bot.command('desuscribir', async (ctx) => {
-  const chatId = ctx.from.id;
-  
-  try {
-    const { error } = await supabase
-      .from('subscribers')
-      .delete()
-      .eq('chat_id', chatId);
-
-    if (error) throw error;
-
-    ctx.reply('🔔 Te has desuscrito. Ya no recibirás notificaciones automáticas.');
-  } catch (error) {
-    console.error('Error al desuscribir:', error);
-    ctx.reply('❌ Ocurrió un error al intentar desuscribirte.');
-  }
-});
-
-// Fase 3: Histórico
-bot.command('historico', (ctx) => {
-  userStates[ctx.from.id] = { type: 'historico' };
-  ctx.reply('📅 *Consulta Histórica*\nPor favor, ingresa la fecha que deseas consultar en formato *DD/MM/YYYY* (Ejemplo: 01/05/2024):', { parse_mode: 'Markdown' });
-});
-
-// Selección de tasa
+/**
+ * Auxiliar para preguntar la cantidad tras seleccionar tipo de tasa.
+ * @param {Context} ctx - Contexto de Telegraf.
+ * @param {string} type - Tipo de conversión (ej: 'usd_to_ves').
+ * @param {string} currency - Etiqueta de moneda para el botón de volver.
+ */
 const askForAmount = (ctx, type, currency) => {
   ctx.editMessageText('¿Qué tasa deseas utilizar?', {
     ...Markup.inlineKeyboard([
@@ -204,7 +233,8 @@ bot.action(/rate:(.+):(.+)/, (ctx) => {
   ctx.answerCbQuery();
 });
 
-// Manejador de texto para procesar la cantidad o la fecha
+// --- Manejador de Mensajes de Texto ---
+
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id;
   const state = userStates[userId];
@@ -213,14 +243,11 @@ bot.on('text', async (ctx) => {
 
   const text = ctx.message.text.trim();
 
-  // Caso 1: Conversión
+  // Caso 1: Flujo de Conversión
   if (state.type === 'conversion') {
-    // Limpiar el número: 
-    // 1. Eliminar puntos que actúan como separadores de miles (ej: 80.000 -> 80000)
-    // 2. Cambiar la coma decimal por punto (ej: 10,5 -> 10.5)
     const cleanText = text
-      .replace(/\.(?=\d{3}(?!\d))/g, '') // Quita puntos si seguidos de 3 dígitos (miles)
-      .replace(',', '.');               // Cambia coma por punto (decimal)
+      .replace(/\.(?=\d{3}(?!\d))/g, '')
+      .replace(',', '.');
     
     const amount = parseFloat(cleanText);
     if (isNaN(amount)) return ctx.reply('❌ Por favor, ingresa un número válido.');
@@ -253,7 +280,6 @@ bot.on('text', async (ctx) => {
         fromSymbol = 'VES';
         toSymbol = isUsd ? 'USD' : 'EUR';
       } else {
-        // Conversión cruzada USD <-> EUR
         const otherRates = state.convType.startsWith('usd') ? await getEuroRates() : await getRates();
         const otherRateData = otherRates.find(r => r.fuente === state.rateType);
         
@@ -265,12 +291,10 @@ bot.on('text', async (ctx) => {
         const otherPrice = otherRateData.promedio;
         
         if (state.convType === 'usd_to_eur') {
-          // amount USD -> amount * price VES -> (amount * price) / otherPrice EUR
           result = (amount * price) / otherPrice;
           fromSymbol = 'USD';
           toSymbol = 'EUR';
         } else {
-          // amount EUR -> amount * price VES -> (amount * price) / otherPrice USD
           result = (amount * price) / otherPrice;
           fromSymbol = 'EUR';
           toSymbol = 'USD';
@@ -291,7 +315,7 @@ bot.on('text', async (ctx) => {
     delete userStates[userId];
   }
 
-  // Caso 2: Histórico
+  // Caso 2: Flujo de Consulta Histórica
   else if (state.type === 'historico') {
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     const match = text.match(dateRegex);
@@ -299,7 +323,7 @@ bot.on('text', async (ctx) => {
     if (!match) return ctx.reply('❌ Formato de fecha inválido. Usa *DD/MM/YYYY* (Ejemplo: 01/05/2024)', { parse_mode: 'Markdown' });
 
     const [_, day, month, year] = match;
-    const formattedDate = `${year}-${month}-${day}`; // Formato API: YYYY-MM-DD
+    const formattedDate = `${year}-${month}-${day}`;
 
     ctx.reply('🔍 Buscando datos históricos...');
 
@@ -331,8 +355,12 @@ bot.on('text', async (ctx) => {
   }
 });
 
-// Lógica de Notificaciones Automáticas (Cron Job)
-// Se ejecuta cada 15 minutos para verificar cambios
+// --- Lógica de Notificaciones Automáticas (Cron Job) ---
+
+/**
+ * Tarea programada: Verifica cambios en la tasa oficial cada 15 minutos.
+ * Si detecta un cambio, actualiza la base de datos y notifica a todos los suscriptores.
+ */
 cron.schedule('*/15 * * * *', async () => {
   console.log('Verificando cambios en la tasa para notificaciones...');
   
@@ -372,7 +400,6 @@ cron.schedule('*/15 * * * *', async () => {
                         `🕒 *Actualizado:* ${formatDate(bcv.fechaActualizacion)}\n\n` +
                         `Usa /tasa para ver el detalle completo.`;
 
-        // Enviar a todos (con un pequeño delay para evitar spam/bloqueo de Telegram)
         for (const sub of subscribers) {
           try {
             await bot.telegram.sendMessage(sub.chat_id, message, { parse_mode: 'Markdown' });
@@ -387,15 +414,21 @@ cron.schedule('*/15 * * * *', async () => {
   }
 });
 
+// Lanzamiento del bot
 bot.launch().then(() => {
   console.log('Bot en línea');
 });
 
-// Enable graceful stop
+// Manejo de parada suave
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
-// Fase 5: Servidor HTTP para Anti-Sleep (Render)
+// --- Servidor HTTP para Anti-Sleep (Render) ---
+
+/**
+ * Servidor HTTP minimalista para mantener el servicio activo en Render
+ * respondiendo a pings en la ruta /ping.
+ */
 const server = http.createServer((req, res) => {
   if (req.url === '/ping') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
