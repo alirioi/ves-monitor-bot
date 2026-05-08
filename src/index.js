@@ -1,16 +1,11 @@
-import 'dotenv/config';
 import { Telegraf, Markup } from 'telegraf';
 import { getRates, getEuroRates, getHistoricRate } from './api.js';
 import supabase from './db.js';
+import { config } from './config.js';
 import cron from 'node-cron';
 import http from 'http';
 
-if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'tu_telegram_bot_token_aqui') {
-  console.error('Error: El BOT_TOKEN no está configurado en el archivo .env');
-  process.exit(1);
-}
-
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(config.botToken);
 
 // Estado temporal para conversiones e históricos (En memoria)
 const userStates = {};
@@ -296,7 +291,7 @@ bot.on('text', async (ctx) => {
 // Lógica de Notificaciones Automáticas (Cron Job)
 // Se ejecuta cada 15 minutos para verificar cambios
 cron.schedule('*/15 * * * *', async () => {
-  console.log('🔄 Verificando cambios en la tasa para notificaciones...');
+  console.log('Verificando cambios en la tasa para notificaciones...');
   
   try {
     const rates = await getRates();
@@ -306,17 +301,17 @@ cron.schedule('*/15 * * * *', async () => {
     if (!bcv) return;
 
     // Obtener la última tasa guardada de Supabase
-    const { data: config } = await supabase
+    const { data: configData } = await supabase
       .from('bot_config')
       .select('value')
       .eq('key', 'last_bcv_rate')
       .single();
 
-    const lastRate = config ? parseFloat(config.value) : 0;
+    const lastRate = configData ? parseFloat(configData.value) : 0;
 
     // Si la tasa cambió
     if (bcv.promedio !== lastRate) {
-      console.log(`📢 ¡Cambio detectado! ${lastRate} -> ${bcv.promedio}. Notificando...`);
+      console.log(`¡Cambio detectado! ${lastRate} -> ${bcv.promedio}. Notificando...`);
 
       // Guardar la nueva tasa
       await supabase
@@ -358,8 +353,6 @@ process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
 // Fase 5: Servidor HTTP para Anti-Sleep (Render)
-const PORT = process.env.PORT || 3000;
-
 const server = http.createServer((req, res) => {
   if (req.url === '/ping') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -371,6 +364,6 @@ const server = http.createServer((req, res) => {
   res.end('VES Tasa Monitor is running');
 });
 
-server.listen(PORT, () => {
-  console.log(`🌍 Servidor HTTP escuchando en el puerto ${PORT} (para pings anti-sleep)`);
+server.listen(config.port, () => {
+  console.log(`Servidor HTTP escuchando en el puerto ${config.port} (para pings anti-sleep)`);
 });

@@ -1,4 +1,6 @@
-const BASE_URL = 'https://ve.dolarapi.com/v1';
+import { config } from './config.js';
+
+const BASE_URL = config.apiUrl;
 
 export async function getRates() {
   try {
