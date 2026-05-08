@@ -414,6 +414,16 @@ cron.schedule('*/15 * * * *', async () => {
   }
 });
 
+// Configuración del menú de comandos en la interfaz de Telegram
+bot.telegram.setMyCommands([
+  { command: 'tasa', description: '📊 Ver tasas del día' },
+  { command: 'convertir', description: '🧮 Calculadora de divisas' },
+  { command: 'historico', description: '📅 Consultar fecha pasada' },
+  { command: 'suscribir', description: '🔔 Recibir alertas de cambios' },
+  { command: 'desuscribir', description: '🔕 Dejar de recibir alertas' },
+  { command: 'help', description: '❓ Ver ayuda' }
+]);
+
 // Lanzamiento del bot
 bot.launch().then(() => {
   console.log('Bot en línea');
