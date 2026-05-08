@@ -262,15 +262,16 @@ bot.on('text', async (ctx) => {
         euroRates = !isUsd ? await getEuroRates() : null;
       }
 
-      const currentRates = usdRates || euroRates;
-      const rateData = currentRates.find(r => r.fuente === state.rateType);
+      // Selección de tasas base (origen)
+      const sourceRates = state.convType.startsWith('usd') ? usdRates : (state.convType.startsWith('eur') ? euroRates : (usdRates || euroRates));
+      const rateData = sourceRates.find(r => r.fuente === state.rateType);
 
       if (!rateData) {
         delete userStates[userId];
         return ctx.reply('❌ No se pudo obtener la tasa seleccionada.');
       }
 
-      const price = rateData.promedio;
+      const price = rateData.promedio; // Precio de la moneda origen en VES
       let result, fromSymbol, toSymbol, usedRate;
 
       if (state.convType.endsWith('to_ves')) {
@@ -285,17 +286,17 @@ bot.on('text', async (ctx) => {
         usedRate = `${(1 / price).toFixed(6)} ${toSymbol}/VES`;
       } else {
         // Conversión cruzada USD <-> EUR
-        const otherRates = state.convType.startsWith('usd') ? euroRates : usdRates;
-        const otherRateData = otherRates.find(r => r.fuente === state.rateType);
-        if (!otherRateData) throw new Error('Other rate not found');
+        const targetRates = state.convType.endsWith('eur') ? euroRates : usdRates;
+        const targetRateData = targetRates.find(r => r.fuente === state.rateType);
+        if (!targetRateData) throw new Error('Target rate not found');
         
-        const otherPrice = otherRateData.promedio;
+        const targetPrice = targetRateData.promedio; // Precio de la moneda destino en VES
         
-        // result = (amount in CURR1 * price CURR1/VES) / price CURR2/VES
-        result = (amount * price) / otherPrice;
+        // result = (monto origen * precio origen VES) / precio destino VES
+        result = (amount * price) / targetPrice;
         fromSymbol = state.convType.startsWith('usd') ? 'USD' : 'EUR';
         toSymbol = state.convType.endsWith('eur') ? 'EUR' : 'USD';
-        usedRate = `${(price / otherPrice).toFixed(6)} ${toSymbol}/${fromSymbol}`;
+        usedRate = `${(price / targetPrice).toFixed(6)} ${toSymbol}/${fromSymbol}`;
       }
 
       ctx.reply(
