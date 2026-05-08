@@ -25,7 +25,6 @@ const SOURCES = {
 
 /** 
  * Estado temporal para conversiones e históricos.
- * Almacena información por ID de usuario para procesos multi-paso.
  * @type {Object<number, Object>} 
  */
 const userStates = {};
@@ -72,7 +71,8 @@ bot.help((ctx) => {
     '/historico - Consulta histórico por fecha\n' +
     '/suscribir - Recibir alertas cuando la tasa cambie\n' +
     '/desuscribir - Dejar de recibir alertas\n' +
-    '/help - Mostrar este mensaje'
+    '/help - Mostrar este mensaje\n\n' +
+    '⚠️ Nota: Los datos son informativos y dependen de terceros. No nos hacemos responsables por el uso de esta información.'
   );
 });
 
@@ -310,7 +310,8 @@ bot.on('text', async (ctx) => {
     const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
     if (!match) return ctx.reply('❌ Formato inválido. Usa DD/MM/YYYY');
 
-    const formattedDate = `${match[3]}-\ ${match[2]}-\ ${match[1]}`;
+    const formattedDate = `${match[3]}-${match[2]}-${match[1]}`;
+
     ctx.reply('🔍 Buscando...');
 
     try {
@@ -338,9 +339,9 @@ bot.on('text', async (ctx) => {
 /**
  * Tarea programada: Verifica cambios en la tasa oficial cada 15 minutos.
  * Si detecta un cambio, actualiza la base de datos y notifica a todos los suscriptores.
+ * Respeta un horario de descanso (7 AM - 10 PM Caracas).
  */
 cron.schedule('*/15 * * * *', async () => {
-  // Obtener la hora actual en Venezuela para respetar el horario de descanso
   const now = new Date();
   const caracasHour = parseInt(now.toLocaleString('en-US', { 
     timeZone: 'America/Caracas', 
@@ -348,9 +349,8 @@ cron.schedule('*/15 * * * *', async () => {
     hour12: false 
   }));
 
-  // Solo notificar entre las 7:00 AM y las 10:00 PM (22:00)
   if (caracasHour < 7 || caracasHour >= 22) {
-    return; // Silencio total durante la madrugada
+    return;
   }
 
   console.log('Verificando cambios en la tasa para notificaciones...');

@@ -22,7 +22,7 @@
 - **Lenguaje**: JavaScript (Node.js)
 - **Framework de Bot**: [Telegraf](https://telegraf.js.org/)
 - **Base de Datos**: [Supabase](https://supabase.com/) (PostgreSQL)
-- **API de Tasas**: [DolarApi.com](https://dolarapi.com/docs/venezuela/)
+- **API de Tasas**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Programación**: `node-cron` para tareas automáticas.
 - **Despliegue**: Render.com
 
@@ -90,6 +90,18 @@ CREATE TABLE bot_config (
 3. Build Command: `pnpm install`
 4. Start Command: `pnpm start`
 5. **Anti-Sleep**: Configura un monitor en [UptimeRobot](https://uptimerobot.com/) que apunte a `https://tu-app.onrender.com/ping` cada 5 minutos.
+
+---
+
+## 🙏 Agradecimientos
+
+Este proyecto utiliza la excelente [Dolar API](https://github.com/enzonotario/esjs-dolar-api) desarrollada por [Enzo Notario](https://github.com/enzonotario). Gracias por proporcionar una herramienta abierta y gratuita para la comunidad.
+
+---
+
+## ⚖️ Descargo de Responsabilidad (Disclaimer)
+
+Este bot es una herramienta meramente **informativa**. Los datos mostrados son obtenidos de fuentes de terceros (DolarAPI.com). El desarrollador no garantiza la exactitud, integridad o actualidad de la información y **no se hace responsable** por decisiones financieras, transacciones, inversiones o pérdidas derivadas del uso de esta herramienta. Consulta siempre las fuentes oficiales para operaciones financieras legales.
 
 ---
 
