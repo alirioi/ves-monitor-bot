@@ -55,6 +55,20 @@ const formatDate = (dateStr) => {
   });
 };
 
+/**
+ * Calcula la diferencia porcentual entre el valor actual y el anterior.
+ * @param {number} current - Tasa actual.
+ * @param {number} previous - Tasa anterior guardada.
+ * @returns {string} Texto formateado con el porcentaje y emoji.
+ */
+const getDiffText = (current, previous) => {
+  if (!previous || previous === 0 || current === previous) return '';
+  const diff = ((current - previous) / previous) * 100;
+  const emoji = diff > 0 ? '🔺' : '🔻';
+  const sign = diff > 0 ? '+' : '';
+  return ` ${emoji} ${sign}${diff.toFixed(2)}%`;
+};
+
 // --- Manejadores de Comandos ---
 
 /** Manejador del comando /start. */
@@ -79,9 +93,17 @@ bot.help((ctx) => {
 /** Manejador del comando /tasa. Obtiene y muestra los precios actuales. */
 bot.command('tasa', async (ctx) => {
   try {
-    const [usdRates, euroRates] = await Promise.all([getRates(), getEuroRates()]);
+    const [usdRates, euroRates, { data: configData }] = await Promise.all([
+      getRates(),
+      getEuroRates(),
+      supabase.from('bot_config').select('*')
+    ]);
 
     if (!usdRates) return ctx.reply('Lo siento, no pude obtener las tasas en este momento.');
+
+    // Convertir array de config a un objeto para fácil acceso
+    const prev = {};
+    configData?.forEach(item => prev[item.key] = parseFloat(item.value));
 
     const bcv = usdRates.find(r => r.fuente === SOURCES.OFICIAL);
     const paralelo = usdRates.find(r => r.fuente === SOURCES.PARALELO);
@@ -89,8 +111,15 @@ bot.command('tasa', async (ctx) => {
     let message = '📊 *Tasas del Día:*\n\n';
 
     message += '💵 *Dólar:*\n';
-    if (bcv) message += `🏦 *Oficial (BCV):* ${bcv.promedio} VES\n`;
-    if (paralelo) message += `📈 *Paralelo:* ${paralelo.promedio.toFixed(2)} VES\n`;
+    if (bcv) {
+      const diff = getDiffText(bcv.promedio, prev.last_usd_oficial);
+      message += `🏦 *Oficial (BCV):* ${bcv.promedio}${diff} VES\n`;
+    }
+    if (paralelo) {
+      const diff = getDiffText(paralelo.promedio, prev.last_usd_paralelo);
+      message += `📈 *Paralelo:* ${paralelo.promedio.toFixed(2)}${diff} VES\n`;
+    }
+    
     if (bcv && paralelo) {
       const avg = (bcv.promedio + paralelo.promedio) / 2;
       message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
@@ -101,11 +130,13 @@ bot.command('tasa', async (ctx) => {
       const euroParalelo = euroRates.find(r => r.fuente === SOURCES.PARALELO);
 
       message += '\n💶 *Euro:*\n';
-      if (euroBcv) message += `🏦 *Oficial (BCV):* ${euroBcv.promedio} VES\n`;
-      if (euroParalelo) message += `📈 *Paralelo:* ${euroParalelo.promedio.toFixed(2)} VES\n`;
-      if (euroBcv && euroParalelo) {
-        const euroAvg = (euroBcv.promedio + euroParalelo.promedio) / 2;
-        message += `⚖️ *Promedio:* ${euroAvg.toFixed(2)} VES\n`;
+      if (euroBcv) {
+        const diff = getDiffText(euroBcv.promedio, prev.last_eur_oficial);
+        message += `🏦 *Oficial (BCV):* ${euroBcv.promedio}${diff} VES\n`;
+      }
+      if (euroParalelo) {
+        const diff = getDiffText(euroParalelo.promedio, prev.last_eur_paralelo);
+        message += `📈 *Paralelo:* ${euroParalelo.promedio.toFixed(2)}${diff} VES\n`;
       }
     }
 
@@ -375,20 +406,45 @@ cron.schedule('*/15 * * * *', async () => {
 
   console.log('Verificando cambios en la tasa para notificaciones...');
   try {
-    const rates = await getRates();
-    const bcv = rates?.find(r => r.fuente === SOURCES.OFICIAL);
-    if (!bcv) return;
+    const [usdRates, euroRates] = await Promise.all([getRates(), getEuroRates()]);
+    
+    // Tasas actuales mapeadas a las llaves de bot_config
+    const current = {
+      last_usd_oficial: usdRates?.find(r => r.fuente === SOURCES.OFICIAL)?.promedio,
+      last_usd_paralelo: usdRates?.find(r => r.fuente === SOURCES.PARALELO)?.promedio,
+      last_eur_oficial: euroRates?.find(r => r.fuente === SOURCES.OFICIAL)?.promedio,
+      last_eur_paralelo: euroRates?.find(r => r.fuente === SOURCES.PARALELO)?.promedio
+    };
 
-    const { data: configData } = await supabase.from('bot_config').select('value').eq('key', 'last_bcv_rate').single();
-    const lastRate = configData ? parseFloat(configData.value) : 0;
+    // Obtener valores previos de la base de datos
+    const { data: configData } = await supabase.from('bot_config').select('*');
+    const prev = {};
+    configData?.forEach(item => prev[item.key] = parseFloat(item.value));
 
-    if (bcv.promedio !== lastRate) {
-      console.log(`Cambio detectado: ${lastRate} -> ${bcv.promedio}`);
-      await supabase.from('bot_config').upsert({ key: 'last_bcv_rate', value: bcv.promedio.toString() });
+    let bcvChanged = false;
 
+    // Verificar y actualizar cada tasa en la base de datos
+    for (const key in current) {
+      const val = current[key];
+      if (val && val !== prev[key]) {
+        console.log(`Cambio detectado en ${key}: ${prev[key]} -> ${val}`);
+        await supabase.from('bot_config').upsert({ key: key, value: val.toString() });
+        
+        // Marcamos si el cambio fue en el Dólar Oficial para notificar
+        if (key === 'last_usd_oficial') bcvChanged = true;
+      }
+    }
+
+    // Notificar solo si cambió el BCV
+    if (bcvChanged) {
+      const bcv = usdRates.find(r => r.fuente === SOURCES.OFICIAL);
       const { data: subscribers } = await supabase.from('subscribers').select('chat_id');
+      
       if (subscribers?.length > 0) {
-        const message = `🔔 *¡Cambio detectado en la tasa BCV!*\n\n🏦 *Nuevo valor:* ${bcv.promedio} VES\n🕒 *Detectado:* ${formatDate(new Date())}`;
+        const diff = getDiffText(bcv.promedio, prev.last_usd_oficial);
+        const message = `🔔 *¡Cambio detectado en la tasa BCV!*\n\n` +
+                        `🏦 *Nuevo valor:* ${bcv.promedio}${diff} VES\n` +
+                        `🕒 *Detectado:* ${formatDate(new Date())}`;
         
         for (const sub of subscribers) {
           try {
