@@ -119,7 +119,7 @@ actions.action('gen_receipt', async (ctx) => {
     const buffer = await generateReceipt(data);
     
     await ctx.replyWithPhoto({ source: buffer }, {
-      caption: `✅ *Recibo generado con éxito*\nGenerado por @${ctx.botInfo.username}`,
+      caption: `✅ *Recibo generado con éxito*\nGenerado por @${ctx.botInfo.username.replace(/_/g, '\\_')}`,
       parse_mode: 'Markdown'
     });
   } catch (error) {
