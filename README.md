@@ -29,7 +29,7 @@
 - **Lenguaje**: JavaScript (Node.js)
 - **Framework de Bot**: [Telegraf](https://telegraf.js.org/)
 - **Base de Datos**: [Supabase](https://supabase.com/) (PostgreSQL)
-- **Generación de Imágenes**: [Canvas](https://www.npmjs.com/package/canvas)
+- **Generación de Imágenes**: [Skia-Canvas](https://www.npmjs.com/package/skia-canvas) (Alto rendimiento y compatibilidad)
 - **API de Tasas**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Programación**: `node-cron` para tareas automáticas.
 
@@ -57,7 +57,7 @@ src/
    git clone https://github.com/tu-usuario/ves-tasa-monitor.git
    cd ves-tasa-monitor
    ```
-2. Instala las dependencias: `pnpm install`
+2. Instala las dependencias: `npm install`
 3. Configura las variables de entorno en un archivo `.env`:
    ```env
    BOT_TOKEN=tu_token_de_telegram
@@ -66,7 +66,7 @@ src/
    PORT=3000
    ```
 4. Asegúrate de tener las fuentes y la plantilla en la carpeta `assets/`.
-5. Ejecuta el bot: `pnpm dev`
+5. Ejecuta el bot en modo desarrollo: `npm run dev`
 
 ## 📋 Estructura de la Base de Datos (Supabase)
 
@@ -120,7 +120,7 @@ Este bot es una herramienta meramente **informativa**. Los datos mostrados son o
 - **Language**: JavaScript (Node.js)
 - **Bot Framework**: [Telegraf](https://telegraf.js.org/)
 - **Database**: [Supabase](https://supabase.com/) (PostgreSQL)
-- **Image Generation**: [Canvas](https://www.npmjs.com/package/canvas)
+- **Image Generation**: [Skia-Canvas](https://www.npmjs.com/package/skia-canvas) (High performance and compatibility)
 - **Rates API**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Scheduling**: `node-cron` for automated tasks.
 
@@ -148,7 +148,7 @@ src/
    git clone https://github.com/your-username/ves-tasa-monitor.git
    cd ves-tasa-monitor
    ```
-2. Install dependencies: `pnpm install`
+2. Install dependencies: `npm install`
 3. Configure environment variables in a `.env` file:
    ```env
    BOT_TOKEN=your_telegram_token
@@ -157,7 +157,7 @@ src/
    PORT=3000
    ```
 4. Ensure you have the fonts and template in the `assets/` folder.
-5. Run the bot: `pnpm dev`
+5. Run the bot: `npm run dev`
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Utilidad para la generación de imágenes dinámicas (recibos) usando Canvas.
+ * @fileoverview Utilidad para la generación de imágenes dinámicas (recibos) usando skia-canvas.
  * Se encarga de cargar plantillas, registrar fuentes y renderizar texto con efectos.
  */
 
