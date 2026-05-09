@@ -7,7 +7,7 @@
 <a name="español"></a>
 # Español 🇪🇸
 
-**VES Tasa Monitor** es un bot de Telegram robusto y eficiente diseñado para monitorear el mercado cambiario en Venezuela. Proporciona tasas en tiempo real (USD/EUR), permite realizar conversiones precisas, consultar datos históricos y recibir notificaciones automáticas ante cambios en la tasa oficial.
+**VES Tasa Monitor** es un bot de Telegram robusto y eficiente diseñado para monitorear el mercado cambiario en Venezuela. Proporciona tasas en tiempo real (USD/EUR), permite realizar conversiones precisas, generar recibos visuales, consultar datos históricos y recibir notificaciones automáticas ante cambios en la tasa oficial.
 
 📢 **Prueba el bot en vivo:** [t.me/ves_monitor_bot](https://t.me/ves_monitor_bot)
 
@@ -15,21 +15,39 @@
 
 - **📊 Tasas en Tiempo Real**: Consulta instantánea del valor del Dólar (BCV, Paralelo, Promedio) y Euro.
 - **🧮 Calculadora de Divisas Inteligente**:
-    - Conversión entre VES, USD y EUR.
+    - Conversión entre VES, USD y EUR con soporte de tasas oficiales y paralelas.
     - Soporta conversiones cruzadas (ej. USD ➡️ EUR).
     - Procesamiento flexible de números (soporta separadores de miles `.` y decimales `,`).
+- **🖼️ Generación de Recibos Visuales**: Crea imágenes profesionales (PNG) con el resultado de tus conversiones para compartir fácilmente.
 - **📅 Consulta Histórica**: Obtén los valores de cualquier fecha pasada directamente desde el bot.
-- **🔔 Notificaciones Automáticas**: Suscríbete para recibir alertas inmediatas cuando el BCV actualice su tasa.
-- **🔋 Alta Disponibilidad**: Optimizado para ejecutarse en Render con sistema anti-sleep y protección de rate-limit.
+- **🔔 Notificaciones Automáticas**: Suscríbete para recibir alertas inmediatas cuando el BCV actualice su tasa oficial.
+- **🏗️ Arquitectura Modular**: Código refactorizado y desacoplado (Handlers, Services, Cron, Utils) para alta escalabilidad y fácil mantenimiento.
+- **🔋 Alta Disponibilidad**: Optimizado para ejecutarse en Render con sistema de persistencia de sesión y protección de rate-limit.
 
 ## 🛠️ Tecnologías Utilizadas
 
 - **Lenguaje**: JavaScript (Node.js)
 - **Framework de Bot**: [Telegraf](https://telegraf.js.org/)
 - **Base de Datos**: [Supabase](https://supabase.com/) (PostgreSQL)
+- **Generación de Imágenes**: [Canvas](https://www.npmjs.com/package/canvas)
 - **API de Tasas**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Programación**: `node-cron` para tareas automáticas.
-- **Despliegue**: Render.com
+
+## 📂 Estructura del Proyecto
+
+El proyecto sigue una arquitectura limpia y modular:
+
+```text
+src/
+├── cron/       # Tareas programadas (monitoreo de cambios)
+├── handlers/   # Manejadores de eventos de Telegram (comandos, acciones, texto)
+├── services/   # Lógica de negocio (conversiones, formateo, notificaciones, tasas)
+├── utils/      # Utilidades (ayudantes de fecha, generador de imágenes)
+├── api.js      # Cliente para la API externa de tasas
+├── config.js   # Gestión centralizada de configuración
+├── db.js       # Cliente de Supabase
+└── index.js    # Punto de entrada y configuración del bot
+```
 
 ## ⚙️ Configuración Local
 
@@ -47,17 +65,20 @@
    SUPABASE_KEY=tu_clave_anon_de_supabase
    PORT=3000
    ```
-4. Ejecuta el bot: `pnpm dev`
+4. Asegúrate de tener las fuentes y la plantilla en la carpeta `assets/`.
+5. Ejecuta el bot: `pnpm dev`
 
 ## 📋 Estructura de la Base de Datos (Supabase)
 
 ```sql
+-- Tabla para suscriptores de alertas
 CREATE TABLE subscribers (
   id BIGSERIAL PRIMARY KEY,
   chat_id BIGINT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Tabla para configuración y estados del bot (tasas previas)
 CREATE TABLE bot_config (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -77,7 +98,7 @@ Este bot es una herramienta meramente **informativa**. Los datos mostrados son o
 <a name="english"></a>
 # English 🇺🇸
 
-**VES Tasa Monitor** is a robust and efficient Telegram bot designed to monitor the exchange market in Venezuela. It provides real-time rates (USD/EUR), accurate currency conversions, historical data lookups, and automated notifications for official rate changes.
+**VES Tasa Monitor** is a robust and efficient Telegram bot designed to monitor the exchange market in Venezuela. It provides real-time rates (USD/EUR), accurate currency conversions, visual receipt generation, historical data lookups, and automated notifications for official rate changes.
 
 📢 **Try the bot live:** [t.me/ves_monitor_bot](https://t.me/ves_monitor_bot)
 
@@ -85,21 +106,39 @@ Este bot es una herramienta meramente **informativa**. Los datos mostrados son o
 
 - **📊 Real-Time Rates**: Instant lookup for Dollar (BCV, Parallel, Average) and Euro rates.
 - **🧮 Smart Currency Calculator**:
-    - Conversion between VES, USD, and EUR.
+    - Conversion between VES, USD, and EUR with support for official and parallel rates.
     - Supports cross-conversions (e.g., USD ➡️ EUR).
     - Flexible number processing (supports `.` thousands separators and `,` decimals).
+- **🖼️ Visual Receipt Generation**: Create professional PNG images with your conversion results for easy sharing.
 - **📅 Historical Lookup**: Get values for any past date directly from the bot.
-- **🔔 Automated Notifications**: Subscribe to receive immediate alerts when the BCV updates its rate.
-- **🔋 High Availability**: Optimized for Render with anti-sleep system and rate-limit protection.
+- **🔔 Automated Notifications**: Subscribe to receive immediate alerts when the BCV updates its official rate.
+- **🏗️ Modular Architecture**: Refactored and decoupled code (Handlers, Services, Cron, Utils) for high scalability and easy maintenance.
+- **🔋 High Availability**: Optimized for Render with session persistence and rate-limit protection.
 
 ## 🛠️ Built With
 
 - **Language**: JavaScript (Node.js)
 - **Bot Framework**: [Telegraf](https://telegraf.js.org/)
 - **Database**: [Supabase](https://supabase.com/) (PostgreSQL)
+- **Image Generation**: [Canvas](https://www.npmjs.com/package/canvas)
 - **Rates API**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Scheduling**: `node-cron` for automated tasks.
-- **Deployment**: Render.com
+
+## 📂 Project Structure
+
+The project follows a clean and modular architecture:
+
+```text
+src/
+├── cron/       # Scheduled tasks (change monitoring)
+├── handlers/   # Telegram event handlers (commands, actions, text)
+├── services/   # Business logic (conversions, formatting, notifications, rates)
+├── utils/      # Utilities (date helpers, image generator)
+├── api.js      # Client for the external rates API
+├── config.js   # Centralized configuration management
+├── db.js       # Supabase client
+└── index.js    # Entry point and bot configuration
+```
 
 ## ⚙️ Local Setup
 
@@ -117,30 +156,8 @@ Este bot es una herramienta meramente **informativa**. Los datos mostrados son o
    SUPABASE_KEY=your_supabase_anon_key
    PORT=3000
    ```
-4. Run the bot: `pnpm dev`
-
-## 📋 Database Schema (Supabase)
-
-```sql
-CREATE TABLE subscribers (
-  id BIGSERIAL PRIMARY KEY,
-  chat_id BIGINT UNIQUE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE bot_config (
-  key TEXT PRIMARY KEY,
-  value TEXT
-);
-```
-
-## 🙏 Acknowledgments
-
-This project uses the excellent [Dolar API](https://github.com/enzonotario/esjs-dolar-api) developed by [Enzo Notario](https://github.com/enzonotario).
-
-## ⚖️ Disclaimer
-
-This bot is a purely **informational** tool. The data displayed is obtained from third-party sources. The developer does not guarantee the accuracy or timeliness of the information and **is not responsible** for financial decisions or losses resulting from the use of this tool.
+4. Ensure you have the fonts and template in the `assets/` folder.
+5. Run the bot: `pnpm dev`
 
 ---
 
