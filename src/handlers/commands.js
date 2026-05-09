@@ -1,5 +1,6 @@
 /**
- * @fileoverview Manejadores de comandos del bot.
+ * @fileoverview Manejadores de comandos del bot (Comandos /start, /help, /tasa, etc.).
+ * Utiliza Composer para modularizar la lógica de comandos.
  */
 
 import { Composer, Markup } from 'telegraf';
@@ -7,12 +8,21 @@ import { RateService } from '../services/rateService.js';
 import { Formatter } from '../services/formatter.js';
 import supabase from '../db.js';
 
+/** Instancia de Composer para agrupar comandos. */
 const commands = new Composer();
 
+/** 
+ * Manejador del comando /start. 
+ * Envía el mensaje de bienvenida inicial.
+ */
 commands.start((ctx) => {
   ctx.reply('¡Hola! Bienvenido a *VES Tasa Monitor* 🇻🇪\n\nTu asistente para consultar el valor del dólar y euro en tiempo real.\n\nUsa /tasa para ver los precios actuales o /help para ver todos los comandos.', { parse_mode: 'Markdown' });
 });
 
+/** 
+ * Manejador del comando /help. 
+ * Muestra la lista de comandos disponibles y notas legales.
+ */
 commands.help((ctx) => {
   ctx.reply(
     'Comandos disponibles:\n' +
@@ -26,6 +36,10 @@ commands.help((ctx) => {
   );
 });
 
+/** 
+ * Manejador del comando /tasa. 
+ * Obtiene tasas actuales y las envía formateadas.
+ */
 commands.command('tasa', async (ctx) => {
   try {
     const { usdRates, euroRates, prev } = await RateService.getAllCurrentData();
@@ -39,6 +53,10 @@ commands.command('tasa', async (ctx) => {
   }
 });
 
+/** 
+ * Manejador del comando /convertir. 
+ * Inicia el flujo de la calculadora con un teclado inline.
+ */
 commands.command('convertir', (ctx) => {
   ctx.reply('🧮 *Calculadora de Divisas*\nSelecciona la moneda que deseas convertir:', {
     parse_mode: 'Markdown',
@@ -50,6 +68,10 @@ commands.command('convertir', (ctx) => {
   });
 });
 
+/** 
+ * Manejador del comando /suscribir. 
+ * Registra al usuario para recibir notificaciones automáticas.
+ */
 commands.command('suscribir', async (ctx) => {
   const chatId = ctx.from.id;
   try {
@@ -62,6 +84,10 @@ commands.command('suscribir', async (ctx) => {
   }
 });
 
+/** 
+ * Manejador del comando /desuscribir. 
+ * Elimina al usuario del sistema de notificaciones.
+ */
 commands.command('desuscribir', async (ctx) => {
   const chatId = ctx.from.id;
   try {
@@ -74,6 +100,10 @@ commands.command('desuscribir', async (ctx) => {
   }
 });
 
+/** 
+ * Manejador del comando /historico. 
+ * Inicia el flujo de consulta por fecha configurando el estado de sesión.
+ */
 commands.command('historico', (ctx) => {
   ctx.session.state = { type: 'historico' };
   ctx.reply('📅 *Consulta Histórica*\nPor favor, ingresa la fecha (DD/MM/YYYY):', { parse_mode: 'Markdown' });

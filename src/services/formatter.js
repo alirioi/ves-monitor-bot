@@ -1,11 +1,23 @@
 /**
- * @fileoverview Servicio para formatear los mensajes del bot.
+ * @fileoverview Servicio para formatear los mensajes del bot utilizando Markdown.
+ * Centraliza el diseño de los mensajes para mantener consistencia visual.
  */
 
 import { formatDate, getDiffText } from '../utils/helpers.js';
 import { SOURCES } from './rateService.js';
 
+/**
+ * Clase encargada de generar el texto formateado de las respuestas.
+ */
 export class Formatter {
+  /**
+   * Genera el mensaje para el comando /tasa con la información de USD, EUR y variaciones.
+   * 
+   * @param {Array} usdRates - Tasas de dólar obtenidas de la API.
+   * @param {Array} euroRates - Tasas de euro obtenidas de la API.
+   * @param {Object} prev - Valores previos guardados en DB para calcular variaciones.
+   * @returns {string} Mensaje formateado en Markdown.
+   */
   static formatTasaMessage(usdRates, euroRates, prev) {
     const bcv = usdRates?.find(r => r.fuente === SOURCES.OFICIAL);
     const paralelo = usdRates?.find(r => r.fuente === SOURCES.PARALELO);
@@ -46,6 +58,14 @@ export class Formatter {
     return message;
   }
 
+  /**
+   * Formatea la respuesta para una consulta histórica.
+   * 
+   * @param {string} dateLabel - Fecha formateada DD/MM/YYYY.
+   * @param {Object} histOficial - Tasa oficial de esa fecha.
+   * @param {Object} histParalelo - Tasa paralela de esa fecha.
+   * @returns {string} Mensaje formateado.
+   */
   static formatHistoricMessage(dateLabel, histOficial, histParalelo) {
     let message = `📊 *Tasas (${dateLabel}):*\n\n`;
     if (histOficial) message += `🏦 *BCV:* ${histOficial.promedio} VES\n`;
@@ -53,6 +73,13 @@ export class Formatter {
     return message;
   }
 
+  /**
+   * Genera el mensaje de notificación automática cuando detecta un cambio.
+   * 
+   * @param {number} newValue - Tasa nueva.
+   * @param {number} oldValue - Tasa anterior.
+   * @returns {string} Mensaje de alerta formateado.
+   */
   static formatNotificationMessage(newValue, oldValue) {
     const diff = getDiffText(newValue, oldValue);
     return `🔔 *¡Cambio detectado en la tasa BCV!*\n\n` +
@@ -60,6 +87,17 @@ export class Formatter {
            `🕒 *Detectado:* ${formatDate(new Date())}`;
   }
 
+  /**
+   * Formatea el resultado de una conversión monetaria.
+   * 
+   * @param {number} amount - Cantidad original.
+   * @param {string} fromSymbol - Símbolo de moneda origen.
+   * @param {string} toSymbol - Símbolo de moneda destino.
+   * @param {string} usedRate - Texto de la tasa utilizada.
+   * @param {number} result - Resultado calculado.
+   * @param {string} rateType - Fuente utilizada (BCV/Paralelo).
+   * @returns {string} Mensaje del resultado de la calculadora.
+   */
   static formatConversionResult(amount, fromSymbol, toSymbol, usedRate, result, rateType) {
     return `✅ *Resultado:*\n\n` +
            `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
