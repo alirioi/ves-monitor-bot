@@ -3,17 +3,21 @@
  * Se encarga de cargar plantillas, registrar fuentes y renderizar texto con efectos.
  */
 
-import { createCanvas, loadImage, registerFont } from 'canvas';
+import { Canvas, FontLibrary, loadImage } from 'skia-canvas';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Registrar fuentes indicando su familia y peso exacto para que Canvas/Pango las reconozca
-registerFont(path.join(__dirname, '../../assets/fonts/Montserrat-Bold.ttf'), { family: 'Montserrat', weight: 'bold' });
-registerFont(path.join(__dirname, '../../assets/fonts/Montserrat-Medium.ttf'), { family: 'Montserrat', weight: '500' });
-registerFont(path.join(__dirname, '../../assets/fonts/Inter_24pt-Bold.ttf'), { family: 'Inter', weight: 'bold' });
-registerFont(path.join(__dirname, '../../assets/fonts/Inter_24pt-Regular.ttf'), { family: 'Inter', weight: 'normal' });
+// skia-canvas registra fuentes de forma global y detecta el peso automáticamente
+FontLibrary.use('Montserrat', [
+  path.join(__dirname, '../../assets/fonts/Montserrat-Bold.ttf'),
+  path.join(__dirname, '../../assets/fonts/Montserrat-Medium.ttf')
+]);
+FontLibrary.use('Inter', [
+  path.join(__dirname, '../../assets/fonts/Inter_24pt-Bold.ttf'),
+  path.join(__dirname, '../../assets/fonts/Inter_24pt-Regular.ttf')
+]);
 
 /**
  * Genera una imagen de recibo basada en una plantilla limpia y datos dinámicos.
@@ -30,7 +34,7 @@ export async function generateReceipt(data) {
   const templatePath = path.join(__dirname, '../../assets/images/plantilla.webp');
   const image = await loadImage(templatePath);
 
-  const canvas = createCanvas(image.width, image.height);
+  const canvas = new Canvas(image.width, image.height);
   const ctx = canvas.getContext('2d');
 
   // Dibujar la plantilla base
@@ -118,5 +122,5 @@ export async function generateReceipt(data) {
 
   clearShadow(ctx);
 
-  return canvas.toBuffer('image/png');
+  return canvas.toBuffer('png');
 }

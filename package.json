@@ -15,9 +15,9 @@
   "packageManager": "pnpm@10.18.3",
   "dependencies": {
     "@supabase/supabase-js": "^2.105.3",
-    "canvas": "^3.2.3",
     "dotenv": "^17.4.2",
     "node-cron": "^4.2.1",
+    "skia-canvas": "^3.0.8",
     "telegraf": "^4.16.3"
   }
 }
