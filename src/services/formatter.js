@@ -97,12 +97,16 @@ export class Formatter {
    * @param {string} usedRate - Texto de la tasa utilizada.
    * @param {number} result - Resultado calculado.
    * @param {string} rateType - Fuente utilizada (BCV/Paralelo).
+   * @param {string} [convType=''] - Tipo de conversión para determinar etiquetas.
    * @returns {string} Mensaje del resultado de la calculadora.
    */
-  static formatConversionResult(amount, fromSymbol, toSymbol, usedRate, result, rateType) {
+  static formatConversionResult(amount, fromSymbol, toSymbol, usedRate, result, rateType, convType = '') {
+    const isUsdt = rateType === 'paralelo' && (convType.includes('usd') || fromSymbol === 'USD' || toSymbol === 'USD');
+    const rateLabel = isUsdt ? 'USDT' : rateType.toUpperCase();
+
     return `✅ *Resultado:*\n\n` +
            `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
-           `🔹 *Tasa:* ${rateType.toUpperCase()}\n` +
+           `🔹 *Tasa:* ${rateLabel}\n` +
            `🔸 *Valor:* ${usedRate}\n` +
            `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`;
   }

@@ -62,7 +62,8 @@ textHandler.on('text', async (ctx) => {
         conversion.toSymbol,
         conversion.usedRate,
         conversion.result,
-        state.rateType
+        state.rateType,
+        state.convType
       );
 
       // Almacenamos temporalmente los datos en la sesión por si el usuario pide un recibo

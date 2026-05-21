@@ -87,7 +87,12 @@ actions.action(/^rate:(.+):(.+)$/, (ctx) => {
   const rateType = ctx.match[1];
   const convType = ctx.match[2];
   ctx.session.state = { type: 'conversion', rateType, convType };
-  const fromLabel = convType.split('_')[0].toUpperCase();
+  
+  let fromLabel = convType.split('_')[0].toUpperCase();
+  if (fromLabel === 'USD' && rateType === 'paralelo') {
+    fromLabel = 'USDT';
+  }
+  
   ctx.reply(`✍️ Ingresa la cantidad en *${fromLabel}*:`, { parse_mode: 'Markdown' });
   ctx.answerCbQuery();
 });
