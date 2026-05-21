@@ -69,7 +69,7 @@ textHandler.on('text', async (ctx) => {
       ctx.session.receiptData = {
         sourceAmount: `${amount.toLocaleString('es-VE', { minimumFractionDigits: 2 })} ${conversion.fromSymbol}`,
         targetAmount: `${conversion.result.toLocaleString('es-VE', { minimumFractionDigits: 2 })} ${conversion.toSymbol}`,
-        rateUsed: `${conversion.price.toFixed(2)} VES/${conversion.fromSymbol} (${state.rateType.toUpperCase()})`,
+        rateUsed: `${conversion.price.toFixed(2)} VES/${conversion.fromSymbol} (${state.rateType === 'paralelo' && state.convType.includes('usd') ? 'USDT' : state.rateType.toUpperCase()})`,
         date: formatDate(new Date())
       };
 
@@ -96,11 +96,11 @@ textHandler.on('text', async (ctx) => {
     ctx.reply('🔍 Buscando...');
 
     try {
-      const { histOficial, histParalelo } = await RateService.getHistoricData(formattedDate);
+      const { histOficial, histUsdt } = await RateService.getHistoricData(formattedDate);
 
-      if (!histOficial && !histParalelo) return ctx.reply('❌ No hay datos para esa fecha.');
+      if (!histOficial && !histUsdt) return ctx.reply('❌ No hay datos para esa fecha.');
 
-      const message = Formatter.formatHistoricMessage(text, histOficial, histParalelo);
+      const message = Formatter.formatHistoricMessage(text, histOficial, histUsdt);
       ctx.replyWithMarkdown(message);
     } catch (error) {
       console.error('Historic Error:', error);

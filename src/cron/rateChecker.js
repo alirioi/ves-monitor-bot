@@ -29,7 +29,7 @@ export const initRateCron = (botInstance) => {
       
       const current = {
         last_usd_oficial: usdRates?.find(r => r.fuente === SOURCES.OFICIAL)?.promedio,
-        last_usd_paralelo: usdRates?.find(r => r.fuente === SOURCES.PARALELO)?.promedio,
+        last_usd_usdt: usdRates?.find(r => r.fuente === SOURCES.PARALELO)?.promedio,
         last_eur_oficial: euroRates?.find(r => r.fuente === SOURCES.OFICIAL)?.promedio,
         last_eur_paralelo: euroRates?.find(r => r.fuente === SOURCES.PARALELO)?.promedio
       };

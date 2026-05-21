@@ -13,7 +13,7 @@
 
 ## 🚀 Características Principales
 
-- **📊 Tasas en Tiempo Real**: Consulta instantánea del valor del Dólar (BCV, Paralelo, Promedio) y Euro.
+- **📊 Tasas en Tiempo Real**: Consulta instantánea del valor del Dólar (BCV, USDT, Promedio) y Euro.
 - **🧮 Calculadora de Divisas Inteligente**:
     - Conversión entre VES, USD y EUR con soporte de tasas oficiales y paralelas.
     - Soporta conversiones cruzadas (ej. USD ➡️ EUR).

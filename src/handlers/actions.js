@@ -63,10 +63,13 @@ actions.action('back_to_main', (ctx) => {
  * @param {string} currency - Moneda para el botón de volver.
  */
 const askForAmount = (ctx, type, currency) => {
+  const isUsd = type.includes('usd');
+  const parallelLabel = isUsd ? '📈 USDT' : '📈 Paralelo';
+
   ctx.editMessageText('¿Qué tasa deseas utilizar?', {
     ...Markup.inlineKeyboard([
       [Markup.button.callback('🏦 Oficial (BCV)', `rate:${SOURCES.OFICIAL}:${type}`)],
-      [Markup.button.callback('📈 Paralelo', `rate:${SOURCES.PARALELO}:${type}`)],
+      [Markup.button.callback(parallelLabel, `rate:${SOURCES.PARALELO}:${type}`)],
       [Markup.button.callback('⬅️ Volver', `conv_${currency.toLowerCase()}`)]
     ])
   });

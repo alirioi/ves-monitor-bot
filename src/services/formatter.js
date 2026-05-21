@@ -20,7 +20,7 @@ export class Formatter {
    */
   static formatTasaMessage(usdRates, euroRates, prev) {
     const bcv = usdRates?.find(r => r.fuente === SOURCES.OFICIAL);
-    const paralelo = usdRates?.find(r => r.fuente === SOURCES.PARALELO);
+    const usdt = usdRates?.find(r => r.fuente === SOURCES.PARALELO);
 
     let message = '📊 *Tasas del Día:*\n\n';
 
@@ -29,13 +29,14 @@ export class Formatter {
       const diff = getDiffText(bcv.promedio, prev.last_usd_oficial);
       message += `🏦 *Oficial (BCV):* ${bcv.promedio}${diff} VES\n`;
     }
-    if (paralelo) {
-      const diff = getDiffText(paralelo.promedio, prev.last_usd_paralelo);
-      message += `📈 *Paralelo:* ${paralelo.promedio.toFixed(2)}${diff} VES\n`;
+    if (usdt) {
+      const prevUsdt = prev.last_usd_usdt || prev.last_usd_paralelo;
+      const diff = getDiffText(usdt.promedio, prevUsdt);
+      message += `📈 *USDT:* ${usdt.promedio.toFixed(2)}${diff} VES\n`;
     }
     
-    if (bcv && paralelo) {
-      const avg = (bcv.promedio + paralelo.promedio) / 2;
+    if (bcv && usdt) {
+      const avg = (bcv.promedio + usdt.promedio) / 2;
       message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
     }
 
@@ -63,13 +64,13 @@ export class Formatter {
    * 
    * @param {string} dateLabel - Fecha formateada DD/MM/YYYY.
    * @param {Object} histOficial - Tasa oficial de esa fecha.
-   * @param {Object} histParalelo - Tasa paralela de esa fecha.
+   * @param {Object} histUsdt - Tasa USDT de esa fecha.
    * @returns {string} Mensaje formateado.
    */
-  static formatHistoricMessage(dateLabel, histOficial, histParalelo) {
+  static formatHistoricMessage(dateLabel, histOficial, histUsdt) {
     let message = `📊 *Tasas (${dateLabel}):*\n\n`;
     if (histOficial) message += `🏦 *BCV:* ${histOficial.promedio} VES\n`;
-    if (histParalelo) message += `📈 *Paralelo:* ${histParalelo.promedio.toFixed(2)} VES\n`;
+    if (histUsdt) message += `📈 *USDT:* ${histUsdt.promedio.toFixed(2)} VES\n`;
     return message;
   }
 
