@@ -1,0 +1,30 @@
+name: Keep Alive (Render & Supabase)
+
+on:
+  schedule:
+    # Se ejecuta cada 30 minutos
+    - cron: '*/30 * * * *'
+  # Permite ejecutar el workflow manualmente desde la pestaña Actions de GitHub
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Web Service
+        run: |
+          echo "Despertando servicio en Render..."
+          curl -s -f https://ves-monitor-bot.onrender.com/ || echo "Fallo al conectar con Render, pero se intentó."
+
+      - name: Ping Supabase Project API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+            echo "⚠️ Advertencia: SUPABASE_URL o SUPABASE_KEY no están configuradas en los Secrets de GitHub."
+            echo "Este paso se omitirá. Asegúrate de agregarlas para evitar que Supabase se pause."
+            exit 0
+          fi
+          echo "Enviando petición a la API de Supabase para registrar actividad..."
+          curl -s -f -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" "$SUPABASE_URL/rest/v1/bot_config?select=key&limit=1" || echo "Fallo al conectar con Supabase."
