@@ -10,6 +10,9 @@ import { config } from './config.js';
  * Cliente de Supabase configurado.
  * Se utiliza para interactuar con las tablas 'subscribers' y 'bot_config'.
  */
-const supabase = createClient(config.supabase.url, config.supabase.key);
+const supabase = createClient(config.supabase.url, config.supabase.key, {
+  auth: { persistSession: false },
+  realtime: { enabled: false }
+});
 
 export default supabase;

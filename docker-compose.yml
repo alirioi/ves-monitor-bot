@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Base de Datos PostgreSQL (Consumo ultra bajo ~40MB RAM)
+  postgres:
+    image: postgres:15-alpine
+    container_name: dolarbot_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecretpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backup_init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  # API PostgREST (Capa REST compatible con @supabase/supabase-js, ~15MB RAM)
+  postgrest:
+    image: postgrest/postgrest:v12.0.2
+    container_name: dolarbot_postgrest
+    restart: always
+    environment:
+      PGRST_DB_URI: postgres://postgres:supersecretpassword@postgres:5432/postgres
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: postgres
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+  # Tu Bot de Telegram
+  bot:
+    build: .
+    container_name: dolarbot_app
+    restart: always
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      SUPABASE_URL: http://postgrest:3000
+      SUPABASE_KEY: dummy_key_for_postgrest
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgrest
+
+volumes:
+  postgres_data:
