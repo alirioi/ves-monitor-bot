@@ -8,10 +8,14 @@ import { Notificator } from '../services/notificator.js';
 import { Formatter } from '../services/formatter.js';
 
 /**
- * Inicializa el cron job.
+ * Inicializa los cron jobs:
+ * 1. Monitoreo cada 15m (7 AM - 10 PM) para alertar cambios en el BCV.
+ * 2. Notificación fija a las 7:00 AM Caracas con el reporte general de tasas.
+ * 
  * @param {Telegraf} botInstance - Instancia del bot para enviar mensajes.
  */
 export const initRateCron = (botInstance) => {
+  // 1. Monitoreo de variaciones en la tasa oficial cada 15 minutos
   cron.schedule('*/15 * * * *', async () => {
     const now = new Date();
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -54,5 +58,24 @@ export const initRateCron = (botInstance) => {
     } catch (error) {
       console.error('Cron Error:', error);
     }
+  });
+
+  // 2. Notificación fija diaria a las 7:00 AM hora de Caracas (0 7 * * *)
+  cron.schedule('0 7 * * *', async () => {
+    console.log('[Cron 7:00 AM] Enviando reporte matutino diario a los usuarios...');
+    try {
+      const { usdRates, euroRates, prev } = await RateService.getAllCurrentData();
+      if (!usdRates) {
+        console.error('[Cron 7:00 AM] No se pudieron obtener las tasas para el reporte.');
+        return;
+      }
+      const message = '☀️ *¡Buenos días!*\nAquí tienes las tasas de hoy:\n\n' + Formatter.formatTasaMessage(usdRates, euroRates, prev);
+      await Notificator.notifySubscribers(botInstance, message);
+      console.log('[Cron 7:00 AM] Reporte diario enviado con éxito.');
+    } catch (error) {
+      console.error('[Cron 7:00 AM Error]:', error);
+    }
+  }, {
+    timezone: 'America/Caracas'
   });
 };

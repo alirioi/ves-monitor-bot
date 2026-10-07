@@ -13,10 +13,17 @@ const commands = new Composer();
 
 /** 
  * Manejador del comando /start. 
- * Envía el mensaje de bienvenida inicial.
+ * Envía el mensaje de bienvenida inicial y registra al usuario para las notificaciones matutinas.
  */
-commands.start((ctx) => {
-  ctx.reply('¡Hola! Bienvenido a *VES Tasa Monitor* 🇻🇪\n\nTu asistente para consultar el valor del dólar y euro en tiempo real.\n\nUsa /tasa para ver los precios actuales o /help para ver todos los comandos.', { parse_mode: 'Markdown' });
+commands.start(async (ctx) => {
+  const chatId = ctx.from.id;
+  try {
+    await supabase.from('subscribers').upsert({ chat_id: chatId }, { onConflict: 'chat_id' });
+  } catch (err) {
+    console.error('Error registrando suscriptor en /start:', err.message);
+  }
+
+  ctx.reply('¡Hola! Bienvenido a *VES Tasa Monitor* 🇻🇪\n\nTu asistente para consultar el valor del dólar y euro en tiempo real.\n\nRecibirás el reporte de tasas todos los días a las 7:00 AM (Caracas).\n\nUsa /tasa para ver los precios actuales o /help para ver todos los comandos.', { parse_mode: 'Markdown' });
 });
 
 /** 
@@ -29,9 +36,8 @@ commands.help((ctx) => {
     '/tasa - Ver las tasas actuales\n' +
     '/convertir - Calculadora de divisas\n' +
     '/historico - Consulta histórico por fecha\n' +
-    '/suscribir - Recibir alertas cuando la tasa cambie\n' +
-    '/desuscribir - Dejar de recibir alertas\n' +
     '/help - Mostrar este mensaje\n\n' +
+    '📢 Notificaciones: Se envían automáticamente todos los días a las 7:00 AM (hora de Venezuela).\n\n' +
     '⚠️ Nota: Los datos son informativos y dependen de terceros. No nos hacemos responsables por el uso de esta información.'
   );
 });
@@ -66,44 +72,6 @@ commands.command('convertir', (ctx) => {
       [Markup.button.callback('💱 Entre USD/EUR', 'conv_cross')]
     ])
   });
-});
-
-/** 
- * Manejador del comando /suscribir. 
- * Registra al usuario para recibir notificaciones automáticas.
- */
-commands.command('suscribir', async (ctx) => {
-  const chatId = ctx.from.id;
-  try {
-    const { data, error } = await supabase.from('subscribers').upsert({ chat_id: chatId }, { onConflict: 'chat_id' });
-    if (error) {
-      console.error('Detalle error al suscribir:', error.message || error.code || error);
-      throw error;
-    }
-    ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie.');
-  } catch (error) {
-    console.error('Error al suscribir:', error?.message || error?.code || error);
-    ctx.reply('❌ Ocurrió un error al intentar suscribirte.');
-  }
-});
-
-/** 
- * Manejador del comando /desuscribir. 
- * Elimina al usuario del sistema de notificaciones.
- */
-commands.command('desuscribir', async (ctx) => {
-  const chatId = ctx.from.id;
-  try {
-    const { data, error } = await supabase.from('subscribers').delete().eq('chat_id', chatId);
-    if (error) {
-      console.error('Detalle error al desuscribir:', error.message || error.code || error);
-      throw error;
-    }
-    ctx.reply('🔔 Te has desuscrito. Ya no recibirás notificaciones automáticas.');
-  } catch (error) {
-    console.error('Error al desuscribir:', error?.message || error?.code || error);
-    ctx.reply('❌ Ocurrió un error al intentar desuscribirte.');
-  }
 });
 
 /** 

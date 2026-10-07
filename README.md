@@ -20,7 +20,7 @@
     - Procesamiento flexible de números (soporta separadores de miles `.` y decimales `,`).
 - **🖼️ Generación de Recibos Visuales**: Crea imágenes profesionales (PNG) con el resultado de tus conversiones para compartir fácilmente.
 - **📅 Consulta Histórica**: Obtén los valores de cualquier fecha pasada directamente desde el bot.
-- **🔔 Notificaciones Automáticas**: Suscríbete para recibir alertas inmediatas cuando el BCV actualice su tasa oficial.
+- **🔔 Notificaciones Automáticas**: Reporte matutino diario a las 7:00 AM (Caracas) y alertas en tiempo real cuando el BCV actualice su tasa oficial.
 - **🏗️ Arquitectura Modular**: Código refactorizado y desacoplado (Handlers, Services, Cron, Utils) para alta escalabilidad y fácil mantenimiento.
 - **🔋 Alta Disponibilidad**: Optimizado para ejecutarse en Render con sistema de persistencia de sesión y protección de rate-limit.
 

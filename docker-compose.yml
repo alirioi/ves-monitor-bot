@@ -25,7 +25,6 @@ services:
       PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-supersecretpassword}@postgres:5432/postgres
       PGRST_DB_SCHEMA: public
       PGRST_DB_ANON_ROLE: postgres
-      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-supersecretjwtsecretthashouldbeatleast32characterlong}
     ports:
       - "3000:3000"
     depends_on:
@@ -42,7 +41,6 @@ services:
       SUPABASE_KEY: dummy_key_for_postgrest
       PORT: 8080
       TZ: America/Caracas
-      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-supersecretjwtsecretthashouldbeatleast32characterlong}
     ports:
       - "8080:8080"
     depends_on:
