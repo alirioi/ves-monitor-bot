@@ -56,21 +56,37 @@ textHandler.on('text', async (ctx) => {
         return ctx.reply('❌ No se pudo realizar la conversión. Verifica los datos.');
       }
 
+      // Determinar la etiqueta clara de la tasa (ej: VES/USDT, VES/USD BCV, etc.)
+      let rateLabel = '';
+      if (state.convType.includes('cross')) {
+        rateLabel = `${conversion.toSymbol}/${conversion.fromSymbol}`;
+      } else if (state.convType.includes('usd')) {
+        rateLabel = state.rateType === 'paralelo' ? 'VES/USDT' : 'VES/USD (BCV)';
+      } else if (state.convType.includes('eur')) {
+        rateLabel = 'VES/EUR (BCV)';
+      } else {
+        rateLabel = `VES/${conversion.fromSymbol}`;
+      }
+
       const message = Formatter.formatConversionResult(
         amount,
         conversion.fromSymbol,
         conversion.toSymbol,
-        conversion.usedRate,
-        conversion.result,
-        state.rateType,
-        state.convType
+        rateLabel,
+        conversion.price,
+        conversion.result
       );
 
-      // Almacenamos temporalmente los datos en la sesión por si el usuario pide un recibo
+      // Formatear montos para el recibo garantizando exactamente 2 decimales para VES
+      const formatReceiptCurrency = (val, symbol) => {
+        return `${val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
+      };
+
+      // Almacenamos los datos en la sesión para el recibo con 2 decimales y etiquetas claras
       ctx.session.receiptData = {
-        sourceAmount: `${amount.toLocaleString('es-VE', { minimumFractionDigits: 2 })} ${conversion.fromSymbol}`,
-        targetAmount: `${conversion.result.toLocaleString('es-VE', { minimumFractionDigits: 2 })} ${conversion.toSymbol}`,
-        rateUsed: `${conversion.price.toFixed(2)} VES/${conversion.fromSymbol} (${state.rateType === 'paralelo' && state.convType.includes('usd') ? 'USDT' : state.rateType.toUpperCase()})`,
+        sourceAmount: formatReceiptCurrency(amount, conversion.fromSymbol),
+        targetAmount: formatReceiptCurrency(conversion.result, conversion.toSymbol),
+        rateUsed: `${conversion.price.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${rateLabel}`,
         date: formatDate(new Date())
       };
 

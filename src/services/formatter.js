@@ -48,7 +48,7 @@ export class Formatter {
       return val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    let message = `📊 *Reporte Monitor Venezuela*\n`;
+    let message = `📊 *Reporte VES Tasa Monitor*\n`;
     message += `🗓️ ${formattedDate}\n`;
     message += `⏱️ Actualizado: ${formattedTime}\n\n`;
 
@@ -108,20 +108,23 @@ export class Formatter {
    * @param {number} amount - Cantidad original.
    * @param {string} fromSymbol - Símbolo de moneda origen.
    * @param {string} toSymbol - Símbolo de moneda destino.
-   * @param {string} usedRate - Texto de la tasa utilizada.
+   * @param {string} rateLabel - Etiqueta de la tasa (ej: 'VES/USDT', 'VES/USD BCV').
+   * @param {number} ratePrice - Valor numérico de la tasa.
    * @param {number} result - Resultado calculado.
-   * @param {string} rateType - Fuente utilizada (BCV/Paralelo).
-   * @param {string} [convType=''] - Tipo de conversión para determinar etiquetas.
    * @returns {string} Mensaje del resultado de la calculadora.
    */
-  static formatConversionResult(amount, fromSymbol, toSymbol, usedRate, result, rateType, convType = '') {
-    const isUsdt = rateType === 'paralelo' && (convType.includes('usd') || fromSymbol === 'USD' || toSymbol === 'USD');
-    const rateLabel = isUsdt ? 'USDT' : rateType.toUpperCase();
+  static formatConversionResult(amount, fromSymbol, toSymbol, rateLabel, ratePrice, result) {
+    const formatNumber = (num, decimals = 2) => {
+      if (num === null || num === undefined || isNaN(num)) return '0,00';
+      return num.toLocaleString('es-VE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    };
+
+    const fromDecimals = fromSymbol === 'VES' ? 2 : 2;
+    const toDecimals = toSymbol === 'VES' ? 2 : 2;
 
     return `✅ *Resultado:*\n\n` +
-           `🔹 *Monto:* ${amount.toLocaleString('es-VE')} ${fromSymbol}\n` +
-           `🔹 *Tasa:* ${rateLabel}\n` +
-           `🔸 *Valor:* ${usedRate}\n` +
-           `🔸 *Total:* ${result.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${toSymbol}`;
+           `🔹 *Monto:* ${formatNumber(amount, fromDecimals)} ${fromSymbol}\n` +
+           `🔹 *Tasa:* ${formatNumber(ratePrice, 2)} ${rateLabel}\n` +
+           `🔸 *Total:* ${formatNumber(result, toDecimals)} ${toSymbol}`;
   }
 }
