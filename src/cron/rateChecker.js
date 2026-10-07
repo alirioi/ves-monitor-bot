@@ -14,16 +14,20 @@ import { Formatter } from '../services/formatter.js';
 export const initRateCron = (botInstance) => {
   cron.schedule('*/15 * * * *', async () => {
     const now = new Date();
-    const caracasHour = parseInt(now.toLocaleString('en-US', { 
-      timeZone: 'America/Caracas', 
-      hour: 'numeric', 
-      hour12: false 
-    }));
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Caracas',
+      hour: 'numeric',
+      hourCycle: 'h23'
+    });
+    const caracasHour = parseInt(formatter.format(now));
 
     // Horario de operación (7 AM - 10 PM Caracas)
-    if (caracasHour < 7 || caracasHour >= 22) return;
+    if (caracasHour < 7 || caracasHour >= 22) {
+      console.log(`[Cron] Fuera de horario de operación en Caracas (Hora actual: ${caracasHour}h).`);
+      return;
+    }
 
-    console.log('Verificando cambios en la tasa para notificaciones...');
+    console.log(`[Cron] Verificando cambios en la tasa para notificaciones (Hora Caracas: ${caracasHour}h)...`);
     try {
       const { usdRates, euroRates, prev } = await RateService.getAllCurrentData();
       

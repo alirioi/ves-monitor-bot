@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     fontconfig \
     fonts-dejavu-core \
     libfontconfig1 \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

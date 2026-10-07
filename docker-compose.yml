@@ -40,6 +40,7 @@ services:
       SUPABASE_URL: http://postgrest:3000
       SUPABASE_KEY: dummy_key_for_postgrest
       PORT: 8080
+      TZ: America/Caracas
     ports:
       - "8080:8080"
     depends_on:
