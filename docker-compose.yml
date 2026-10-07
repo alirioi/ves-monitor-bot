@@ -42,6 +42,7 @@ services:
       SUPABASE_KEY: dummy_key_for_postgrest
       PORT: 8080
       TZ: America/Caracas
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-supersecretjwtsecretthashouldbeatleast32characterlong}
     ports:
       - "8080:8080"
     depends_on:
