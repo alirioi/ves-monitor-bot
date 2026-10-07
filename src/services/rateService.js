@@ -25,10 +25,15 @@ export class RateService {
   static async getAllCurrentData() {
     let configData = null;
     try {
-      const res = await supabase.from('bot_config').select('*');
+      // Timeout defensivo de 3 segundos para la consulta de base de datos
+      const dbPromise = supabase.from('bot_config').select('*');
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('DB Timeout')), 3000)
+      );
+      const res = await Promise.race([dbPromise, timeoutPromise]);
       configData = res.data;
     } catch (err) {
-      console.error('Error obteniendo bot_config:', err.message);
+      console.error('Aviso BD (bot_config):', err.message);
     }
 
     const [usdRates, euroRates] = await Promise.all([

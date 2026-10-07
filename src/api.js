@@ -32,7 +32,7 @@ export async function getRates() {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/dolares`);
+    const response = await fetch(`${BASE_URL}/dolares`, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) throw new Error('Error al obtener las tasas');
     const data = await response.json();
     
@@ -40,7 +40,7 @@ export async function getRates() {
     cache.usd.lastFetch = now;
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('API Error:', error.message);
     return null;
   }
 }
@@ -57,7 +57,7 @@ export async function getEuroRates() {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/euros`);
+    const response = await fetch(`${BASE_URL}/euros`, { signal: AbortSignal.timeout(5000) });
     if (!response.ok) throw new Error('Error al obtener las tasas de euros');
     const data = await response.json();
 
