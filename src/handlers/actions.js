@@ -63,13 +63,10 @@ actions.action('back_to_main', (ctx) => {
  * @param {string} currency - Moneda para el botón de volver.
  */
 const askForAmount = (ctx, type, currency) => {
-  const isUsd = type.includes('usd');
-  const parallelLabel = isUsd ? '📈 USDT' : '📈 Paralelo';
-
   ctx.editMessageText('¿Qué tasa deseas utilizar?', {
     ...Markup.inlineKeyboard([
       [Markup.button.callback('🏦 Oficial (BCV)', `rate:${SOURCES.OFICIAL}:${type}`)],
-      [Markup.button.callback(parallelLabel, `rate:${SOURCES.PARALELO}:${type}`)],
+      [Markup.button.callback('📈 USDT', `rate:${SOURCES.PARALELO}:${type}`)],
       [Markup.button.callback('⬅️ Volver', `conv_${currency.toLowerCase()}`)]
     ])
   });
@@ -77,7 +74,15 @@ const askForAmount = (ctx, type, currency) => {
 
 // Registro de manejadores dinámicos para los botones de moneda
 actions.action(/^(usd_to_ves|ves_to_usd)$/, (ctx) => askForAmount(ctx, ctx.match[1], 'USD'));
-actions.action(/^(eur_to_ves|ves_to_eur)$/, (ctx) => askForAmount(ctx, ctx.match[1], 'EUR'));
+
+// Para Euro se utiliza directamente la tasa Oficial (BCV)
+actions.action(/^(eur_to_ves|ves_to_eur)$/, (ctx) => {
+  const convType = ctx.match[1];
+  ctx.session.state = { type: 'conversion', rateType: SOURCES.OFICIAL, convType };
+  const fromLabel = convType.startsWith('eur') ? 'EUR' : 'VES';
+  ctx.reply(`✍️ Ingresa la cantidad en *${fromLabel}* (Tasa Oficial BCV):`, { parse_mode: 'Markdown' });
+  ctx.answerCbQuery();
+});
 
 /**
  * Manejador para la selección final de tasa.

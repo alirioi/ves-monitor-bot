@@ -11,51 +11,65 @@ import { SOURCES } from './rateService.js';
  */
 export class Formatter {
   /**
-   * Genera el mensaje para el comando /tasa con la información de USD, EUR y variaciones.
+   * Genera el mensaje para el comando /tasa con el formato de Reporte Monitor Venezuela.
    * 
    * @param {Array} usdRates - Tasas de dólar obtenidas de la API.
    * @param {Array} euroRates - Tasas de euro obtenidas de la API.
    * @param {Object} prev - Valores previos guardados en DB para calcular variaciones.
    * @returns {string} Mensaje formateado en Markdown.
    */
-  static formatTasaMessage(usdRates, euroRates, prev) {
+  static formatTasaMessage(usdRates, euroRates, prev = {}) {
     const bcv = usdRates?.find(r => r.fuente === SOURCES.OFICIAL);
     const usdt = usdRates?.find(r => r.fuente === SOURCES.PARALELO);
+    const euroBcv = euroRates?.find(r => r.fuente === SOURCES.OFICIAL);
 
-    let message = '📊 *Tasas del Día:*\n\n';
+    const now = new Date();
 
-    message += '💵 *Dólar:*\n';
-    if (bcv) {
-      const diff = getDiffText(bcv.promedio, prev.last_usd_oficial);
-      message += `🏦 *Oficial (BCV):* ${bcv.promedio}${diff} VES\n`;
+    // Formatear Fecha: "Miércoles, 7 de oct. de 2026"
+    const rawDate = now.toLocaleDateString('es-VE', {
+      timeZone: 'America/Caracas',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+    const formattedDate = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
+
+    // Formatear Hora: "05:58 p. m."
+    const formattedTime = now.toLocaleTimeString('es-VE', {
+      timeZone: 'America/Caracas',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const formatCurrency = (val) => {
+      if (val === null || val === undefined || isNaN(val)) return '0,00';
+      return val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    let message = `📊 *Reporte Monitor Venezuela*\n`;
+    message += `🗓️ ${formattedDate}\n`;
+    message += `⏱️ Actualizado: ${formattedTime}\n\n`;
+
+    if (bcv?.promedio) {
+      message += `🇺🇸 *Dólar BCV:* Bs. ${formatCurrency(bcv.promedio)}\n`;
     }
-    if (usdt) {
-      const prevUsdt = prev.last_usd_usdt || prev.last_usd_paralelo;
-      const diff = getDiffText(usdt.promedio, prevUsdt);
-      message += `📈 *USDT:* ${usdt.promedio.toFixed(2)}${diff} VES\n`;
-    }
-    
-    if (bcv && usdt) {
-      const avg = (bcv.promedio + usdt.promedio) / 2;
-      message += `⚖️ *Promedio:* ${avg.toFixed(2)} VES\n`;
+
+    if (usdt?.promedio) {
+      message += `🟡 *USDT Binance:* Bs. ${formatCurrency(usdt.promedio)}\n`;
     }
 
-    if (euroRates) {
-      const euroBcv = euroRates.find(r => r.fuente === SOURCES.OFICIAL);
-      const euroParalelo = euroRates.find(r => r.fuente === SOURCES.PARALELO);
-
-      message += '\n💶 *Euro:*\n';
-      if (euroBcv) {
-        const diff = getDiffText(euroBcv.promedio, prev.last_eur_oficial);
-        message += `🏦 *Oficial (BCV):* ${euroBcv.promedio}${diff} VES\n`;
-      }
-      if (euroParalelo) {
-        const diff = getDiffText(euroParalelo.promedio, prev.last_eur_paralelo);
-        message += `📈 *Paralelo:* ${euroParalelo.promedio.toFixed(2)}${diff} VES\n`;
-      }
+    if (euroBcv?.promedio) {
+      message += `🇪🇺 *Euro BCV:* Bs. ${formatCurrency(euroBcv.promedio)}\n`;
     }
 
-    message += `\n🕒 *Última consulta:* ${formatDate(new Date())}`;
+    if (bcv?.promedio && usdt?.promedio) {
+      const diffBs = usdt.promedio - bcv.promedio;
+      const diffPct = ((diffBs / bcv.promedio) * 100).toFixed(2);
+      message += `\n⚖️ *Brecha:* Bs. ${formatCurrency(diffBs)} (${diffPct}%)`;
+    }
+
     return message;
   }
 
