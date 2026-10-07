@@ -23,10 +23,17 @@ export class RateService {
    * @returns {Promise<Object>} Objeto con usdRates, euroRates y el objeto prev con valores históricos.
    */
   static async getAllCurrentData() {
-    const [usdRates, euroRates, { data: configData }] = await Promise.all([
+    let configData = null;
+    try {
+      const res = await supabase.from('bot_config').select('*');
+      configData = res.data;
+    } catch (err) {
+      console.error('Error obteniendo bot_config:', err.message);
+    }
+
+    const [usdRates, euroRates] = await Promise.all([
       getRates(),
-      getEuroRates(),
-      supabase.from('bot_config').select('*')
+      getEuroRates()
     ]);
 
     const prev = {};
