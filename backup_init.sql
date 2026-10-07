@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS public.bot_config (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
+
 INSERT INTO public.subscribers (chat_id) VALUES (834558753) ON CONFLICT (chat_id) DO NOTHING;
 INSERT INTO public.bot_config (key, value) VALUES ('last_bcv_rate', '499.8608') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 INSERT INTO public.bot_config (key, value) VALUES ('last_usd_paralelo', '710.12375') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
