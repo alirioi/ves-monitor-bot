@@ -77,12 +77,12 @@ commands.command('suscribir', async (ctx) => {
   try {
     const { data, error } = await supabase.from('subscribers').upsert({ chat_id: chatId }, { onConflict: 'chat_id' });
     if (error) {
-      console.error('Detalle error al suscribir:', JSON.stringify(error, null, 2));
+      console.error('Detalle error al suscribir:', error.message || error.code || error);
       throw error;
     }
     ctx.reply('✅ ¡Te has suscrito con éxito! Te avisaré cuando la tasa oficial del BCV cambie.');
   } catch (error) {
-    console.error('Error al suscribir:', error);
+    console.error('Error al suscribir:', error?.message || error?.code || error);
     ctx.reply('❌ Ocurrió un error al intentar suscribirte.');
   }
 });
@@ -96,12 +96,12 @@ commands.command('desuscribir', async (ctx) => {
   try {
     const { data, error } = await supabase.from('subscribers').delete().eq('chat_id', chatId);
     if (error) {
-      console.error('Detalle error al desuscribir:', JSON.stringify(error, null, 2));
+      console.error('Detalle error al desuscribir:', error.message || error.code || error);
       throw error;
     }
     ctx.reply('🔔 Te has desuscrito. Ya no recibirás notificaciones automáticas.');
   } catch (error) {
-    console.error('Error al desuscribir:', error);
+    console.error('Error al desuscribir:', error?.message || error?.code || error);
     ctx.reply('❌ Ocurrió un error al intentar desuscribirte.');
   }
 });
