@@ -36,7 +36,7 @@ bot.use(textHandler);
 initRateCron(bot);
 
 // Lanzamiento del bot con manejo de errores
-bot.launch()
+bot.launch({ dropPendingUpdates: true })
   .then(() => console.log('🚀 Bot VES Tasa Monitor en línea'))
   .catch((err) => console.error('Error crítico al iniciar el bot:', err));
 
