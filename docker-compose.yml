@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: supersecretpassword
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supersecretpassword}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backup_init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -22,10 +22,10 @@ services:
     container_name: dolarbot_postgrest
     restart: always
     environment:
-      PGRST_DB_URI: postgres://postgres:supersecretpassword@postgres:5432/postgres
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-supersecretpassword}@postgres:5432/postgres
       PGRST_DB_SCHEMA: public
       PGRST_DB_ANON_ROLE: postgres
-      PGRST_JWT_SECRET: supersecretjwtsecretthashouldbeatleast32characterlong
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-supersecretjwtsecretthashouldbeatleast32characterlong}
     ports:
       - "3000:3000"
     depends_on:
