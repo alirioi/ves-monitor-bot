@@ -11,6 +11,7 @@ import commands from './handlers/commands.js';
 import actions from './handlers/actions.js';
 import textHandler from './handlers/text.js';
 import { initRateCron } from './cron/rateChecker.js';
+import pgPool from './pgClient.js';
 
 /** Instancia principal del bot de Telegram. */
 const bot = new Telegraf(config.botToken);
@@ -24,6 +25,23 @@ bot.use(session());
  */
 bot.use((ctx, next) => {
   ctx.session ??= {};
+  return next();
+});
+
+/**
+ * Middleware global de auto-registro.
+ * Registra silenciosamente a cualquier usuario que interactúe con el bot
+ * en la tabla 'subscribers'. Captura usuarios que nunca recibieron su
+ * registro inicial por errores en la DB.
+ */
+bot.use(async (ctx, next) => {
+  const chatId = ctx.from?.id;
+  if (chatId) {
+    pgPool.query(
+      `INSERT INTO public.subscribers (chat_id) VALUES ($1) ON CONFLICT (chat_id) DO NOTHING`,
+      [chatId]
+    ).catch(err => console.error('[Auto-registro] Error:', err.message));
+  }
   return next();
 });
 

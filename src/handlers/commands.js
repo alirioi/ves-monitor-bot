@@ -6,7 +6,7 @@
 import { Composer, Markup } from 'telegraf';
 import { RateService } from '../services/rateService.js';
 import { Formatter } from '../services/formatter.js';
-import supabase from '../db.js';
+import pgPool from '../pgClient.js';
 
 /** Instancia de Composer para agrupar comandos. */
 const commands = new Composer();
@@ -18,7 +18,10 @@ const commands = new Composer();
 commands.start(async (ctx) => {
   const chatId = ctx.from.id;
   try {
-    await supabase.from('subscribers').upsert({ chat_id: chatId }, { onConflict: 'chat_id' });
+    await pgPool.query(
+      `INSERT INTO public.subscribers (chat_id) VALUES ($1) ON CONFLICT (chat_id) DO NOTHING`,
+      [chatId]
+    );
   } catch (err) {
     console.error('Error registrando suscriptor en /start:', err.message);
   }
