@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Base de Datos PostgreSQL (Consumo ultra bajo ~40MB RAM)
+  # Base de Datos PostgreSQL nativa (Consumo ultra bajo ~40MB RAM)
   postgres:
     image: postgres:15-alpine
     container_name: dolarbot_postgres
@@ -15,37 +15,27 @@ services:
       - ./backup_init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # API PostgREST (Capa REST compatible con @supabase/supabase-js, ~15MB RAM)
-  postgrest:
-    image: postgrest/postgrest:v12.0.2
-    container_name: dolarbot_postgrest
-    restart: always
-    environment:
-      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-supersecretpassword}@postgres:5432/postgres
-      PGRST_DB_SCHEMA: public
-      PGRST_DB_ANON_ROLE: postgres
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-
-  # Tu Bot de Telegram
+  # Bot de Telegram (conexión directa a PostgreSQL vía pool nativo pg)
   bot:
     build: .
     container_name: dolarbot_app
     restart: always
     environment:
       BOT_TOKEN: ${BOT_TOKEN}
-      SUPABASE_URL: http://postgrest:3000
-      SUPABASE_KEY: dummy_key_for_postgrest
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-supersecretpassword}@postgres:5432/postgres
       PORT: 8080
       TZ: America/Caracas
     ports:
       - "8080:8080"
     depends_on:
-      - postgrest
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

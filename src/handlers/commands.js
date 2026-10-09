@@ -6,7 +6,7 @@
 import { Composer, Markup } from 'telegraf';
 import { RateService } from '../services/rateService.js';
 import { Formatter } from '../services/formatter.js';
-import pgPool from '../pgClient.js';
+import pool from '../db.js';
 
 /** Instancia de Composer para agrupar comandos. */
 const commands = new Composer();
@@ -18,7 +18,7 @@ const commands = new Composer();
 commands.start(async (ctx) => {
   const chatId = ctx.from.id;
   try {
-    await pgPool.query(
+    await pool.query(
       `INSERT INTO public.subscribers (chat_id) VALUES ($1) ON CONFLICT (chat_id) DO NOTHING`,
       [chatId]
     );

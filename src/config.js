@@ -11,8 +11,6 @@ import 'dotenv/config';
  */
 const requiredEnvVars = [
   'BOT_TOKEN',
-  'SUPABASE_URL',
-  'SUPABASE_KEY',
   'DATABASE_URL'
 ];
 
@@ -31,19 +29,13 @@ for (const varName of requiredEnvVars) {
  * Objeto de configuración global.
  * @type {Object}
  * @property {string} botToken - Token de acceso para el bot de Telegram.
- * @property {Object} supabase - Configuración para el cliente de Supabase.
- * @property {string} supabase.url - URL del proyecto Supabase.
- * @property {string} supabase.key - Clave anónima o de servicio de Supabase.
- * @property {number|string} port - Puerto en el que escucha el servidor HTTP (Render).
+ * @property {string} databaseUrl - URI de conexión a la base de datos PostgreSQL.
+ * @property {number|string} port - Puerto en el que escucha el servidor HTTP de salud.
  * @property {string} apiUrl - URL base de la API de tasas de cambio.
  */
 export const config = {
   botToken: process.env.BOT_TOKEN,
-  supabase: {
-    url: process.env.SUPABASE_URL,
-    key: process.env.SUPABASE_KEY,
-  },
   databaseUrl: process.env.DATABASE_URL,
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 8080,
   apiUrl: 'https://ve.dolarapi.com/v1'
 };

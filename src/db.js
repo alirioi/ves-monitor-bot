@@ -1,14 +1,22 @@
 /**
- * @fileoverview Cliente de Supabase para la persistencia de datos.
- * Inicializa el cliente utilizando la configuración centralizada.
+ * @fileoverview Cliente de base de datos PostgreSQL.
+ * Gestiona el pool de conexiones directas a PostgreSQL para la persistencia del bot.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import pg from 'pg';
 import { config } from './config.js';
 
-const supabase = createClient(config.supabase.url, config.supabase.key, {
-  auth: { persistSession: false },
-  realtime: { enabled: false }
+const { Pool } = pg;
+
+const pool = new Pool({
+  connectionString: config.databaseUrl,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10
 });
 
-export default supabase;
+pool.on('error', (err) => {
+  console.error('[DB] Error inesperado en el pool de PostgreSQL:', err.message);
+});
+
+export default pool;

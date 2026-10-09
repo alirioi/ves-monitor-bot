@@ -13,7 +13,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.3",
     "dotenv": "^17.4.2",
     "node-cron": "^4.2.1",
     "pg": "^8.23.1",

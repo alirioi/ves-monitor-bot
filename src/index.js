@@ -1,7 +1,7 @@
 /**
  * @fileoverview Punto de entrada principal para el bot VES Tasa Monitor.
  * Orquestador central que inicializa el bot, carga los middlewares de sesión,
- * registra los manejadores de eventos y lanza el servidor HTTP para Render.
+ * registra los manejadores de eventos y lanza el servidor HTTP para monitoreo de salud.
  */
 
 import { Telegraf, session } from 'telegraf';
@@ -11,7 +11,7 @@ import commands from './handlers/commands.js';
 import actions from './handlers/actions.js';
 import textHandler from './handlers/text.js';
 import { initRateCron } from './cron/rateChecker.js';
-import pgPool from './pgClient.js';
+import pool from './db.js';
 
 /** Instancia principal del bot de Telegram. */
 const bot = new Telegraf(config.botToken);
@@ -37,7 +37,7 @@ bot.use((ctx, next) => {
 bot.use(async (ctx, next) => {
   const chatId = ctx.from?.id;
   if (chatId) {
-    pgPool.query(
+    pool.query(
       `INSERT INTO public.subscribers (chat_id) VALUES ($1) ON CONFLICT (chat_id) DO NOTHING`,
       [chatId]
     ).catch(err => console.error('[Auto-registro] Error:', err.message));
@@ -64,7 +64,7 @@ process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
 /**
  * Servidor HTTP minimalista.
- * Necesario para que plataformas como Render detecten que el servicio está activo (Health Check).
+ * Necesario para comprobación de estado (Health Check) en contenedores y monitoreo del homelab.
  */
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });

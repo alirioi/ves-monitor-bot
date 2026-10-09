@@ -1,13 +1,10 @@
 /**
  * @fileoverview Servicio para la obtención, consulta y persistencia de tasas de cambio.
- * Centraliza las llamadas a la API y las interacciones con la base de datos para datos de tasas.
- * - Lecturas: via Supabase JS (PostgREST)
- * - Escrituras: via conexión directa pg (sin dependencia de JWT)
+ * Centraliza las llamadas a la API y las interacciones con PostgreSQL para datos de tasas.
  */
 
 import { getRates, getEuroRates, getHistoricRate } from '../api.js';
-import supabase from '../db.js';
-import pgPool from '../pgClient.js';
+import pool from '../db.js';
 
 /** Fuentes de tasas soportadas. */
 export const SOURCES = {
@@ -28,13 +25,8 @@ export class RateService {
   static async getAllCurrentData() {
     let configData = null;
     try {
-      // Timeout defensivo de 10 segundos para la consulta de base de datos
-      const dbPromise = supabase.from('bot_config').select('*');
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('DB Timeout')), 10000)
-      );
-      const res = await Promise.race([dbPromise, timeoutPromise]);
-      configData = res.data;
+      const res = await pool.query('SELECT key, value FROM public.bot_config');
+      configData = res.rows;
     } catch (err) {
       console.error('Aviso BD (bot_config):', err.message);
     }
@@ -66,7 +58,6 @@ export class RateService {
 
   /**
    * Actualiza el valor de una tasa en la tabla 'bot_config' solo si el nuevo valor es diferente al anterior.
-   * Usa conexión directa a PostgreSQL (sin JWT) para garantizar que el write siempre funcione.
    * 
    * @param {string} key - Clave de la tasa (ej: 'last_usd_oficial').
    * @param {number} newValue - Valor actual de la tasa.
@@ -81,7 +72,7 @@ export class RateService {
     if (!hasChanged) return false;
 
     try {
-      await pgPool.query(
+      await pool.query(
         `INSERT INTO public.bot_config (key, value, updated_at)
          VALUES ($1, $2, NOW())
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,

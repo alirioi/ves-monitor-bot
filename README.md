@@ -13,22 +13,22 @@
 
 ## 🚀 Características Principales
 
-- **📊 Tasas en Tiempo Real**: Consulta instantánea del valor del Dólar (BCV, USDT, Promedio) y Euro.
+- **📊 Tasas en Tiempo Real**: Consulta instantánea del valor del Dólar (BCV, USDT Binance) y Euro BCV con cálculo de brecha cambiaria.
 - **🧮 Calculadora de Divisas Inteligente**:
-    - Conversión entre VES, USD y EUR con soporte de tasas oficiales y paralelas.
+    - Conversión entre VES, USD y EUR con soporte de tasas oficiales y USDT.
     - Soporta conversiones cruzadas (ej. USD ➡️ EUR).
     - Procesamiento flexible de números (soporta separadores de miles `.` y decimales `,`).
 - **🖼️ Generación de Recibos Visuales**: Crea imágenes profesionales (PNG) con el resultado de tus conversiones para compartir fácilmente.
 - **📅 Consulta Histórica**: Obtén los valores de cualquier fecha pasada directamente desde el bot.
 - **🔔 Notificaciones Automáticas**: Reporte matutino diario a las 7:00 AM (Caracas) y alertas en tiempo real cuando el BCV actualice su tasa oficial.
 - **🏗️ Arquitectura Modular**: Código refactorizado y desacoplado (Handlers, Services, Cron, Utils) para alta escalabilidad y fácil mantenimiento.
-- **🔋 Alta Disponibilidad**: Optimizado para ejecutarse en Render con sistema de persistencia de sesión y protección de rate-limit.
+- **🔋 Homelab Self-Hosted**: Optimizado para ejecución en Docker Compose con PostgreSQL nativo (bajo consumo de recursos).
 
 ## 🛠️ Tecnologías Utilizadas
 
-- **Lenguaje**: JavaScript (Node.js)
+- **Lenguaje**: JavaScript (Node.js 22)
 - **Framework de Bot**: [Telegraf](https://telegraf.js.org/)
-- **Base de Datos**: [Supabase](https://supabase.com/) (PostgreSQL)
+- **Base de Datos**: PostgreSQL 15 (Conexión directa vía pool nativo `pg`)
 - **Generación de Imágenes**: [Skia-Canvas](https://www.npmjs.com/package/skia-canvas) (Alto rendimiento y compatibilidad)
 - **API de Tasas**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Programación**: `node-cron` para tareas automáticas.
@@ -39,49 +39,49 @@ El proyecto sigue una arquitectura limpia y modular:
 
 ```text
 src/
-├── cron/       # Tareas programadas (monitoreo de cambios)
+├── cron/       # Tareas programadas (monitoreo de cambios y reporte 7:00 AM)
 ├── handlers/   # Manejadores de eventos de Telegram (comandos, acciones, texto)
 ├── services/   # Lógica de negocio (conversiones, formateo, notificaciones, tasas)
 ├── utils/      # Utilidades (ayudantes de fecha, generador de imágenes)
 ├── api.js      # Cliente para la API externa de tasas
 ├── config.js   # Gestión centralizada de configuración
-├── db.js       # Cliente de Supabase
+├── db.js       # Cliente y pool de conexiones PostgreSQL (pg)
 └── index.js    # Punto de entrada y configuración del bot
 ```
 
-## ⚙️ Configuración Local
+## ⚙️ Despliegue con Docker Compose (Homelab)
 
-### Instalación
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/ves-tasa-monitor.git
-   cd ves-tasa-monitor
+   git clone https://github.com/alirioi/ves-monitor-bot.git
+   cd ves-monitor-bot
    ```
-2. Instala las dependencias: `npm install`
-3. Configura las variables de entorno en un archivo `.env`:
+2. Configura tu archivo `.env`:
    ```env
    BOT_TOKEN=tu_token_de_telegram
-   SUPABASE_URL=tu_url_de_supabase
-   SUPABASE_KEY=tu_clave_anon_de_supabase
-   PORT=3000
+   POSTGRES_PASSWORD=tu_password_seguro
+   DATABASE_URL=postgres://postgres:tu_password_seguro@postgres:5432/postgres
+   PORT=8080
    ```
-4. Asegúrate de tener las fuentes y la plantilla en la carpeta `assets/`.
-5. Ejecuta el bot en modo desarrollo: `npm run dev`
+3. Inicia los servicios:
+   ```bash
+   docker compose up -d --build
+   ```
 
-## 📋 Estructura de la Base de Datos (Supabase)
+## 📋 Estructura de la Base de Datos (PostgreSQL)
 
 ```sql
--- Tabla para suscriptores de alertas
-CREATE TABLE subscribers (
-  id BIGSERIAL PRIMARY KEY,
-  chat_id BIGINT UNIQUE NOT NULL,
+-- Tabla para suscriptores de alertas y reporte diario
+CREATE TABLE IF NOT EXISTS public.subscribers (
+  chat_id BIGINT PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Tabla para configuración y estados del bot (tasas previas)
-CREATE TABLE bot_config (
+CREATE TABLE IF NOT EXISTS public.bot_config (
   key TEXT PRIMARY KEY,
-  value TEXT
+  value TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
@@ -104,64 +104,27 @@ Este bot es una herramienta meramente **informativa**. Los datos mostrados son o
 
 ## 🚀 Key Features
 
-- **📊 Real-Time Rates**: Instant lookup for Dollar (BCV, Parallel, Average) and Euro rates.
+- **📊 Real-Time Rates**: Instant lookup for Dollar (BCV, USDT Binance) and Euro rates with exchange spread calculations.
 - **🧮 Smart Currency Calculator**:
-    - Conversion between VES, USD, and EUR with support for official and parallel rates.
+    - Conversion between VES, USD, and EUR with support for official and USDT rates.
     - Supports cross-conversions (e.g., USD ➡️ EUR).
     - Flexible number processing (supports `.` thousands separators and `,` decimals).
 - **🖼️ Visual Receipt Generation**: Create professional PNG images with your conversion results for easy sharing.
 - **📅 Historical Lookup**: Get values for any past date directly from the bot.
-- **🔔 Automated Notifications**: Subscribe to receive immediate alerts when the BCV updates its official rate.
-- **🏗️ Modular Architecture**: Refactored and decoupled code (Handlers, Services, Cron, Utils) for high scalability and easy maintenance.
-- **🔋 High Availability**: Optimized for Render with session persistence and rate-limit protection.
+- **🔔 Automated Notifications**: Daily morning report at 7:00 AM (Caracas) and real-time alerts when BCV updates official rates.
+- **🏗️ Modular Architecture**: Clean decoupled architecture (Handlers, Services, Cron, Utils) for high maintainability.
+- **🔋 Homelab Self-Hosted**: Optimized for Docker Compose with native PostgreSQL.
 
 ## 🛠️ Built With
 
-- **Language**: JavaScript (Node.js)
+- **Language**: JavaScript (Node.js 22)
 - **Bot Framework**: [Telegraf](https://telegraf.js.org/)
-- **Database**: [Supabase](https://supabase.com/) (PostgreSQL)
-- **Image Generation**: [Skia-Canvas](https://www.npmjs.com/package/skia-canvas) (High performance and compatibility)
+- **Database**: PostgreSQL 15 (Direct pool connection via `pg`)
+- **Image Generation**: [Skia-Canvas](https://www.npmjs.com/package/skia-canvas)
 - **Rates API**: [Dolar API](https://github.com/enzonotario/esjs-dolar-api)
 - **Scheduling**: `node-cron` for automated tasks.
 
-## 📂 Project Structure
-
-The project follows a clean and modular architecture:
-
-```text
-src/
-├── cron/       # Scheduled tasks (change monitoring)
-├── handlers/   # Telegram event handlers (commands, actions, text)
-├── services/   # Business logic (conversions, formatting, notifications, rates)
-├── utils/      # Utilities (date helpers, image generator)
-├── api.js      # Client for the external rates API
-├── config.js   # Centralized configuration management
-├── db.js       # Supabase client
-└── index.js    # Entry point and bot configuration
-```
-
-## ⚙️ Local Setup
-
-### Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/ves-tasa-monitor.git
-   cd ves-tasa-monitor
-   ```
-2. Install dependencies: `npm install`
-3. Configure environment variables in a `.env` file:
-   ```env
-   BOT_TOKEN=your_telegram_token
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_anon_key
-   PORT=3000
-   ```
-4. Ensure you have the fonts and template in the `assets/` folder.
-5. Run the bot: `npm run dev`
-
----
-
-## 📄 Licencia / License
+## 📄 License
 
 MIT License - [LICENSE](LICENSE)
 
