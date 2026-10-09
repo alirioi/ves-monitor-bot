@@ -46,14 +46,15 @@ export class RateService {
    * Obtiene tasas históricas para una fecha específica desde la API.
    * 
    * @param {string} dateStr - Fecha en formato YYYY-MM-DD.
-   * @returns {Promise<Object>} Objeto con histOficial e histUsdt para esa fecha.
+   * @returns {Promise<Object>} Objeto con histOficial, histUsdt e histEuro para esa fecha.
    */
   static async getHistoricData(dateStr) {
-    const [histOficial, histUsdt] = await Promise.all([
+    const [histOficial, histUsdt, histEuro] = await Promise.all([
       getHistoricRate(dateStr, 'dolares', SOURCES.OFICIAL),
-      getHistoricRate(dateStr, 'dolares', SOURCES.PARALELO)
+      getHistoricRate(dateStr, 'dolares', SOURCES.PARALELO),
+      getHistoricRate(dateStr, 'euros', SOURCES.OFICIAL)
     ]);
-    return { histOficial, histUsdt };
+    return { histOficial, histUsdt, histEuro };
   }
 
   /**

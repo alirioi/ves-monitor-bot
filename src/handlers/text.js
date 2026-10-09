@@ -113,11 +113,11 @@ textHandler.on('text', async (ctx) => {
     ctx.reply('🔍 Buscando...');
 
     try {
-      const { histOficial, histUsdt } = await RateService.getHistoricData(formattedDate);
+      const { histOficial, histUsdt, histEuro } = await RateService.getHistoricData(formattedDate);
 
-      if (!histOficial && !histUsdt) return ctx.reply('❌ No hay datos para esa fecha.');
+      if (!histOficial && !histUsdt && !histEuro) return ctx.reply('❌ No hay datos para esa fecha.');
 
-      const message = Formatter.formatHistoricMessage(text, histOficial, histUsdt);
+      const message = Formatter.formatHistoricMessage(text, histOficial, histUsdt, histEuro);
       ctx.replyWithMarkdown(message);
     } catch (error) {
       console.error('Historic Error:', error);

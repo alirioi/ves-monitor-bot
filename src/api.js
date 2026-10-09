@@ -71,21 +71,23 @@ export async function getEuroRates() {
 }
 
 /**
- * Obtiene la tasa histórica para una fecha y fuente específica.
+ * Obtiene la tasa histórica para una fecha y fuente específica consultando directamente el endpoint por fecha.
  * @async
- * @param {string} date - Fecha en formato YYYY-MM-DD.
+ * @param {string} date - Fecha en formato YYYY-MM-DD o YYYY/MM/DD.
  * @param {string} [type='dolares'] - Tipo de moneda ('dolares' o 'euros').
  * @param {string} [fuente='oficial'] - Fuente de la tasa ('oficial' o 'paralelo').
  * @returns {Promise<Object|null>} El registro de la tasa para esa fecha o null si no se encuentra.
  */
 export async function getHistoricRate(date, type = 'dolares', fuente = 'oficial') {
   try {
-    const response = await fetch(`${BASE_URL}/historicos/${type}/${fuente}`);
+    const datePath = date.replace(/-/g, '/');
+    const response = await fetch(`${BASE_URL}/historicos/${type}/${fuente}/${datePath}`, {
+      signal: AbortSignal.timeout(5000)
+    });
     if (!response.ok) return null;
-    const history = await response.json();
-    return history.find(entry => entry.fecha === date);
+    return await response.json();
   } catch (error) {
-    console.error('API Historic Error:', error);
+    console.error(`API Historic Error (${type}/${fuente}):`, error.message);
     return null;
   }
 }

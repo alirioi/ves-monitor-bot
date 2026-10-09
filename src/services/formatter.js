@@ -77,14 +77,21 @@ export class Formatter {
    * Formatea la respuesta para una consulta histórica.
    * 
    * @param {string} dateLabel - Fecha formateada DD/MM/YYYY.
-   * @param {Object} histOficial - Tasa oficial de esa fecha.
+   * @param {Object} histOficial - Tasa Dólar oficial de esa fecha.
    * @param {Object} histUsdt - Tasa USDT de esa fecha.
+   * @param {Object} [histEuro] - Tasa Euro oficial de esa fecha.
    * @returns {string} Mensaje formateado.
    */
-  static formatHistoricMessage(dateLabel, histOficial, histUsdt) {
-    let message = `📊 *Tasas (${dateLabel}):*\n\n`;
-    if (histOficial) message += `🏦 *BCV:* ${histOficial.promedio} VES\n`;
-    if (histUsdt) message += `📈 *USDT:* ${histUsdt.promedio.toFixed(2)} VES\n`;
+  static formatHistoricMessage(dateLabel, histOficial, histUsdt, histEuro = null) {
+    const formatCurrency = (val) => {
+      if (val === null || val === undefined || isNaN(val)) return '0,00';
+      return val.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    let message = `📊 *Tasas Históricas (${dateLabel})*\n\n`;
+    if (histOficial?.promedio) message += `🇺🇸 *Dólar BCV:* Bs. ${formatCurrency(histOficial.promedio)}\n`;
+    if (histUsdt?.promedio) message += `🟡 *USDT Binance:* Bs. ${formatCurrency(histUsdt.promedio)}\n`;
+    if (histEuro?.promedio) message += `🇪🇺 *Euro BCV:* Bs. ${formatCurrency(histEuro.promedio)}\n`;
     return message;
   }
 
