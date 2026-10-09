@@ -53,9 +53,27 @@ bot.use(textHandler);
 // Inicialización de la tarea programada (cron) para monitoreo de tasas
 initRateCron(bot);
 
-// Lanzamiento del bot con manejo de errores
+// Comandos oficiales para el menú interactivo de Telegram
+const botCommands = [
+  { command: 'tasa', description: 'Tasas actuales de Venezuela (BCV, USDT, Euro)' },
+  { command: 'convertir', description: 'Calculadora de divisas (VES, COP, ARS)' },
+  { command: 'colombia', description: 'Tasas de Colombia (TRM y Mercado)' },
+  { command: 'argentina', description: 'Tasas de Argentina (Oficial y Blue)' },
+  { command: 'historico', description: 'Consulta de tasas por fecha' },
+  { command: 'help', description: 'Ayuda e información del bot' }
+];
+
+// Lanzamiento del bot con registro de comandos y manejo de errores
 bot.launch({ dropPendingUpdates: true })
-  .then(() => console.log('🚀 Bot VES Tasa Monitor en línea'))
+  .then(async () => {
+    try {
+      await bot.telegram.setMyCommands(botCommands);
+      console.log('📋 Comandos del menú sincronizados con éxito en Telegram');
+    } catch (err) {
+      console.error('Aviso: no se pudieron sincronizar los comandos en Telegram:', err.message);
+    }
+    console.log('🚀 Bot VES Tasa Monitor en línea');
+  })
   .catch((err) => console.error('Error crítico al iniciar el bot:', err));
 
 // Configuración de apagado elegante (Graceful Shutdown)
