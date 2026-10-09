@@ -39,6 +39,7 @@ services:
       BOT_TOKEN: ${BOT_TOKEN}
       SUPABASE_URL: http://postgrest:3000
       SUPABASE_KEY: dummy_key_for_postgrest
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-supersecretpassword}@postgres:5432/postgres
       PORT: 8080
       TZ: America/Caracas
     ports:

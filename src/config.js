@@ -12,7 +12,8 @@ import 'dotenv/config';
 const requiredEnvVars = [
   'BOT_TOKEN',
   'SUPABASE_URL',
-  'SUPABASE_KEY'
+  'SUPABASE_KEY',
+  'DATABASE_URL'
 ];
 
 /**
@@ -42,6 +43,7 @@ export const config = {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_KEY,
   },
+  databaseUrl: process.env.DATABASE_URL,
   port: process.env.PORT || 3000,
   apiUrl: 'https://ve.dolarapi.com/v1'
 };

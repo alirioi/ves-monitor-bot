@@ -1,10 +1,13 @@
 /**
  * @fileoverview Servicio para la obtención, consulta y persistencia de tasas de cambio.
- * Centraliza las llamadas a la API y las interacciones con Supabase para datos de tasas.
+ * Centraliza las llamadas a la API y las interacciones con la base de datos para datos de tasas.
+ * - Lecturas: via Supabase JS (PostgREST)
+ * - Escrituras: via conexión directa pg (sin dependencia de JWT)
  */
 
 import { getRates, getEuroRates, getHistoricRate } from '../api.js';
 import supabase from '../db.js';
+import pgPool from '../pgClient.js';
 
 /** Fuentes de tasas soportadas. */
 export const SOURCES = {
@@ -25,10 +28,10 @@ export class RateService {
   static async getAllCurrentData() {
     let configData = null;
     try {
-      // Timeout defensivo de 3 segundos para la consulta de base de datos
+      // Timeout defensivo de 10 segundos para la consulta de base de datos
       const dbPromise = supabase.from('bot_config').select('*');
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('DB Timeout')), 3000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('DB Timeout')), 10000)
       );
       const res = await Promise.race([dbPromise, timeoutPromise]);
       configData = res.data;
@@ -63,17 +66,32 @@ export class RateService {
 
   /**
    * Actualiza el valor de una tasa en la tabla 'bot_config' solo si el nuevo valor es diferente al anterior.
+   * Usa conexión directa a PostgreSQL (sin JWT) para garantizar que el write siempre funcione.
    * 
    * @param {string} key - Clave de la tasa (ej: 'last_usd_oficial').
    * @param {number} newValue - Valor actual de la tasa.
    * @param {number} oldValue - Valor anterior guardado.
-   * @returns {Promise<boolean>} True si el valor fue actualizado, False en caso contrario.
+   * @returns {Promise<boolean>} True si el valor fue actualizado y persistido, False en caso contrario.
    */
   static async updateRateIfChanged(key, newValue, oldValue) {
-    if (newValue && newValue !== oldValue) {
-      await supabase.from('bot_config').upsert({ key: key, value: newValue.toString() });
+    if (!newValue) return false;
+
+    // Comparar con tolerancia para evitar falsos positivos por precisión float
+    const hasChanged = oldValue === undefined || Math.abs(newValue - (oldValue || 0)) > 0.001;
+    if (!hasChanged) return false;
+
+    try {
+      await pgPool.query(
+        `INSERT INTO public.bot_config (key, value, updated_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [key, newValue.toString()]
+      );
+      console.log(`[DB] Tasa actualizada: ${key} = ${newValue} (anterior: ${oldValue})`);
       return true;
+    } catch (err) {
+      console.error(`[DB] Error al actualizar ${key}:`, err.message);
+      return false;
     }
-    return false;
   }
 }
