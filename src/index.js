@@ -55,12 +55,12 @@ initRateCron(bot);
 
 // Comandos oficiales para el menú interactivo de Telegram
 const botCommands = [
-  { command: 'tasa', description: 'Tasas actuales de Venezuela (BCV, USDT, Euro)' },
-  { command: 'convertir', description: 'Calculadora de divisas (VES, COP, ARS)' },
-  { command: 'colombia', description: 'Tasas de Colombia (TRM y Mercado)' },
-  { command: 'argentina', description: 'Tasas de Argentina (Oficial y Blue)' },
-  { command: 'historico', description: 'Consulta de tasas por fecha' },
-  { command: 'help', description: 'Ayuda e información del bot' }
+  { command: 'tasa', description: '📊 Tasas de cambio' },
+  { command: 'convertir', description: '🧮 Calculadora de divisas' },
+  { command: 'colombia', description: '🇨🇴 Tasas de Colombia' },
+  { command: 'argentina', description: '🇦🇷 Tasas de Argentina' },
+  { command: 'historico', description: '📅 Consulta histórica' },
+  { command: 'help', description: 'ℹ️ Ayuda' }
 ];
 
 // Sincronización de comandos y lanzamiento del bot
