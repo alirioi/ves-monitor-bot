@@ -1,6 +1,6 @@
 /**
  * @fileoverview Servicio para realizar los cálculos de conversión de divisas.
- * Encapsula la lógica de negocio de los cálculos entre USD, EUR y VES.
+ * Encapsula la lógica de negocio de los cálculos entre USD, EUR, VES, COP y ARS.
  */
 
 /**
@@ -12,13 +12,54 @@ export class ConversionService {
    * 
    * @param {Object} params - Parámetros de la conversión.
    * @param {number} params.amount - Cantidad a convertir.
-   * @param {string} params.convType - Tipo de conversión (ej: 'usd_to_ves', 'ves_to_eur').
-   * @param {string} params.rateType - Fuente de la tasa ('oficial' o 'paralelo').
-   * @param {Array} params.usdRates - Lista de tasas actuales para el dólar.
-   * @param {Array} params.euroRates - Lista de tasas actuales para el euro.
+   * @param {string} params.convType - Tipo de conversión (ej: 'usd_to_ves', 'cop_to_usd', 'ars_to_usd').
+   * @param {string} params.rateType - Fuente de la tasa ('oficial', 'paralelo', 'trm', 'mercado', 'blue').
+   * @param {Array} [params.usdRates] - Lista de tasas actuales para el dólar venezolano.
+   * @param {Array} [params.euroRates] - Lista de tasas actuales para el euro venezolano.
+   * @param {Object} [params.copRates] - Tasas de Colombia (trm, mercado).
+   * @param {Object} [params.arsRates] - Tasas de Argentina (oficial, blue).
    * @returns {Object|null} Objeto con los resultados de la conversión o null si hay error.
    */
-  static convert({ amount, convType, rateType, usdRates, euroRates }) {
+  static convert({ amount, convType, rateType, usdRates, euroRates, copRates, arsRates }) {
+    // 1. Conversiones de Peso Colombiano (COP ↔ USD)
+    if (convType.includes('cop')) {
+      const price = rateType === 'trm' ? copRates?.trm : copRates?.mercado;
+      if (!price) return null;
+
+      let result, fromSymbol, toSymbol, rateLabel;
+      if (convType === 'usd_to_cop') {
+        result = amount * price;
+        fromSymbol = 'USD';
+        toSymbol = 'COP';
+      } else {
+        result = amount / price;
+        fromSymbol = 'COP';
+        toSymbol = 'USD';
+      }
+      rateLabel = rateType === 'trm' ? 'COP/USD (TRM Oficial)' : 'COP/USD (Mercado)';
+      return { result, fromSymbol, toSymbol, price, rateLabel };
+    }
+
+    // 2. Conversiones de Peso Argentino (ARS ↔ USD)
+    if (convType.includes('ars')) {
+      const price = rateType === 'blue' ? arsRates?.blue : arsRates?.oficial;
+      if (!price) return null;
+
+      let result, fromSymbol, toSymbol, rateLabel;
+      if (convType === 'usd_to_ars') {
+        result = amount * price;
+        fromSymbol = 'USD';
+        toSymbol = 'ARS';
+      } else {
+        result = amount / price;
+        fromSymbol = 'ARS';
+        toSymbol = 'USD';
+      }
+      rateLabel = rateType === 'blue' ? 'ARS/USD (Blue)' : 'ARS/USD (Oficial)';
+      return { result, fromSymbol, toSymbol, price, rateLabel };
+    }
+
+    // 3. Conversiones estándar de Venezuela (VES, USD, EUR)
     const isUsd = convType.includes('usd');
     const sourceRates = convType.startsWith('usd') ? usdRates : (convType.startsWith('eur') ? euroRates : (usdRates || euroRates));
     const rateData = sourceRates?.find(r => r.fuente === rateType);
@@ -54,4 +95,3 @@ export class ConversionService {
     return { result, fromSymbol, toSymbol, usedRate, price };
   }
 }
-

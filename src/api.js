@@ -14,7 +14,9 @@ const BASE_URL = config.apiUrl;
  */
 const cache = {
   usd: { data: null, lastFetch: 0 },
-  eur: { data: null, lastFetch: 0 }
+  eur: { data: null, lastFetch: 0 },
+  colombia: { data: null, lastFetch: 0 },
+  argentina: { data: null, lastFetch: 0 }
 };
 
 /** Tiempo de vida de la caché (1 minuto). */
@@ -88,6 +90,81 @@ export async function getHistoricRate(date, type = 'dolares', fuente = 'oficial'
     return await response.json();
   } catch (error) {
     console.error(`API Historic Error (${type}/${fuente}):`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Obtiene las tasas actuales para Colombia (TRM oficial y Mercado) con soporte de caché.
+ * @async
+ * @returns {Promise<Object|null>} Objeto con trm, compra, venta y mercado o null si ocurre un error.
+ */
+export async function getColombiaRates() {
+  const now = Date.now();
+  if (cache.colombia.data && (now - cache.colombia.lastFetch < CACHE_TTL)) {
+    return cache.colombia.data;
+  }
+
+  try {
+    const [trmRes, usdRes] = await Promise.all([
+      fetch('https://co.dolarapi.com/v1/trm', { signal: AbortSignal.timeout(5000) }),
+      fetch('https://co.dolarapi.com/v1/cotizaciones/usd', { signal: AbortSignal.timeout(5000) })
+    ]);
+
+    const trmData = trmRes.ok ? await trmRes.json() : null;
+    const usdData = usdRes.ok ? await usdRes.json() : null;
+
+    const data = {
+      trm: trmData?.valor || null,
+      mercado: usdData?.venta || usdData?.compra || null,
+      compra: usdData?.compra || null,
+      venta: usdData?.venta || null,
+      updatedAt: trmData?.fechaActualizacion || usdData?.fechaActualizacion || new Date().toISOString()
+    };
+
+    cache.colombia.data = data;
+    cache.colombia.lastFetch = now;
+    return data;
+  } catch (error) {
+    console.error('API Colombia Error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Obtiene las tasas actuales para Argentina (Oficial y Blue) con soporte de caché.
+ * @async
+ * @returns {Promise<Object|null>} Objeto con oficial y blue (compra/venta) o null si ocurre un error.
+ */
+export async function getArgentinaRates() {
+  const now = Date.now();
+  if (cache.argentina.data && (now - cache.argentina.lastFetch < CACHE_TTL)) {
+    return cache.argentina.data;
+  }
+
+  try {
+    const res = await fetch('https://dolarapi.com/v1/dolares', { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error('Error al obtener tasas de Argentina');
+    const dolares = await res.json();
+
+    const oficial = dolares.find(d => d.casa === 'oficial');
+    const blue = dolares.find(d => d.casa === 'blue');
+
+    const data = {
+      oficial: oficial?.venta || oficial?.compra || null,
+      oficialCompra: oficial?.compra || null,
+      oficialVenta: oficial?.venta || null,
+      blue: blue?.venta || blue?.compra || null,
+      blueCompra: blue?.compra || null,
+      blueVenta: blue?.venta || null,
+      updatedAt: blue?.fechaActualizacion || oficial?.fechaActualizacion || new Date().toISOString()
+    };
+
+    cache.argentina.data = data;
+    cache.argentina.lastFetch = now;
+    return data;
+  } catch (error) {
+    console.error('API Argentina Error:', error.message);
     return null;
   }
 }

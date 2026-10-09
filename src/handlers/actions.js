@@ -43,14 +43,40 @@ actions.action('conv_cross', (ctx) => {
   });
 });
 
+/** Acción: Menú de selección para Peso Colombiano. */
+actions.action('conv_cop', (ctx) => {
+  ctx.editMessageText('🇨🇴 *Colombia — Conversión COP ↔ USD*\n¿Qué tipo de conversión deseas hacer?', {
+    parse_mode: 'Markdown',
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('COP ➡️ USD', 'cop_to_usd')],
+      [Markup.button.callback('USD ➡️ COP', 'usd_to_cop')],
+      [Markup.button.callback('⬅️ Volver', 'back_to_main')]
+    ])
+  });
+});
+
+/** Acción: Menú de selección para Peso Argentino. */
+actions.action('conv_ars', (ctx) => {
+  ctx.editMessageText('🇦🇷 *Argentina — Conversión ARS ↔ USD*\n¿Qué tipo de conversión deseas hacer?', {
+    parse_mode: 'Markdown',
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('ARS ➡️ USD', 'ars_to_usd')],
+      [Markup.button.callback('USD ➡️ ARS', 'usd_to_ars')],
+      [Markup.button.callback('⬅️ Volver', 'back_to_main')]
+    ])
+  });
+});
+
 /** Acción: Volver al menú principal de la calculadora. */
 actions.action('back_to_main', (ctx) => {
   ctx.editMessageText('🧮 *Calculadora de Divisas*\nSelecciona la moneda que deseas convertir:', {
     parse_mode: 'Markdown',
     ...Markup.inlineKeyboard([
-      [Markup.button.callback('💵 Dólar (USD)', 'conv_usd')],
-      [Markup.button.callback('💶 Euro (EUR)', 'conv_eur')],
-      [Markup.button.callback('💱 Entre USD/EUR', 'conv_cross')]
+      [Markup.button.callback('💵 Dólar (USD / VES)', 'conv_usd')],
+      [Markup.button.callback('💶 Euro (EUR / VES)', 'conv_eur')],
+      [Markup.button.callback('💱 Entre USD / EUR', 'conv_cross')],
+      [Markup.button.callback('🇨🇴 Peso Colombiano (COP ↔ USD)', 'conv_cop')],
+      [Markup.button.callback('🇦🇷 Peso Argentino (ARS ↔ USD)', 'conv_ars')]
     ])
   });
 });
@@ -82,6 +108,30 @@ actions.action(/^(eur_to_ves|ves_to_eur)$/, (ctx) => {
   const fromLabel = convType.startsWith('eur') ? 'EUR' : 'VES';
   ctx.reply(`✍️ Ingresa la cantidad en *${fromLabel}* (Tasa Oficial BCV):`, { parse_mode: 'Markdown' });
   ctx.answerCbQuery();
+});
+
+// Selección de tasa para Colombia (TRM Oficial o Mercado)
+actions.action(/^(cop_to_usd|usd_to_cop)$/, (ctx) => {
+  const convType = ctx.match[1];
+  ctx.editMessageText('🇨🇴 ¿Qué tasa de Colombia deseas utilizar?', {
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('🏛️ TRM (Oficial)', `rate:trm:${convType}`)],
+      [Markup.button.callback('💵 Mercado', `rate:mercado:${convType}`)],
+      [Markup.button.callback('⬅️ Volver', 'conv_cop')]
+    ])
+  });
+});
+
+// Selección de tasa para Argentina (Oficial o Blue)
+actions.action(/^(ars_to_usd|usd_to_ars)$/, (ctx) => {
+  const convType = ctx.match[1];
+  ctx.editMessageText('🇦🇷 ¿Qué tasa de Argentina deseas utilizar?', {
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('🏛️ Oficial', `rate:oficial:${convType}`)],
+      [Markup.button.callback('💵 Blue', `rate:blue:${convType}`)],
+      [Markup.button.callback('⬅️ Volver', 'conv_ars')]
+    ])
+  });
 });
 
 /**

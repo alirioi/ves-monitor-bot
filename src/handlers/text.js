@@ -4,7 +4,7 @@
  */
 
 import { Composer, Markup } from 'telegraf';
-import { getRates, getEuroRates } from '../api.js';
+import { getRates, getEuroRates, getColombiaRates, getArgentinaRates } from '../api.js';
 import { formatDate } from '../utils/helpers.js';
 import { RateService } from '../services/rateService.js';
 import { ConversionService } from '../services/conversionService.js';
@@ -31,10 +31,14 @@ textHandler.on('text', async (ctx) => {
 
     try {
       const isCross = state.convType.includes('eur') && state.convType.includes('usd');
-      let usdRates, euroRates;
+      let usdRates, euroRates, copRates, arsRates;
       
       // Obtención de tasas según el tipo de moneda seleccionada
-      if (isCross) {
+      if (state.convType.includes('cop')) {
+        copRates = await getColombiaRates();
+      } else if (state.convType.includes('ars')) {
+        arsRates = await getArgentinaRates();
+      } else if (isCross) {
         [usdRates, euroRates] = await Promise.all([getRates(), getEuroRates()]);
       } else {
         const isUsd = state.convType.includes('usd');
@@ -48,7 +52,9 @@ textHandler.on('text', async (ctx) => {
         convType: state.convType,
         rateType: state.rateType,
         usdRates,
-        euroRates
+        euroRates,
+        copRates,
+        arsRates
       });
 
       if (!conversion) {
@@ -56,9 +62,11 @@ textHandler.on('text', async (ctx) => {
         return ctx.reply('❌ No se pudo realizar la conversión. Verifica los datos.');
       }
 
-      // Determinar la etiqueta clara de la tasa (ej: VES/USDT, VES/USD BCV, etc.)
+      // Determinar la etiqueta clara de la tasa
       let rateLabel = '';
-      if (state.convType.includes('cross')) {
+      if (conversion.rateLabel) {
+        rateLabel = conversion.rateLabel;
+      } else if (state.convType.includes('cross')) {
         rateLabel = `${conversion.toSymbol}/${conversion.fromSymbol}`;
       } else if (state.convType.includes('usd')) {
         rateLabel = state.rateType === 'paralelo' ? 'VES/USDT' : 'VES/USD (BCV)';

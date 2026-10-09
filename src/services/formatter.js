@@ -134,4 +134,86 @@ export class Formatter {
            `🔹 *Tasa:* ${formatNumber(ratePrice, 2)} ${rateLabel}\n` +
            `🔸 *Total:* ${formatNumber(result, toDecimals)} ${toSymbol}`;
   }
+
+  /**
+   * Formatea el mensaje de tasas para Colombia.
+   * 
+   * @param {Object} rates - Objeto con trm, compra, venta y mercado.
+   * @returns {string} Mensaje formateado en Markdown.
+   */
+  static formatColombiaRates(rates) {
+    const formatNumber = (num) => {
+      if (num === null || num === undefined || isNaN(num)) return '0,00';
+      return num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const now = new Date();
+    const rawDate = now.toLocaleDateString('es-VE', {
+      timeZone: 'America/Bogota',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+    const formattedDate = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
+
+    let msg = `🇨🇴 *Tasas de Cambio — Colombia*\n`;
+    msg += `🗓️ ${formattedDate}\n\n`;
+
+    if (rates?.trm) {
+      msg += `🏛️ *TRM (Oficial):* $ ${formatNumber(rates.trm)} COP\n`;
+    }
+    if (rates?.venta) {
+      msg += `💵 *Dólar Mercado (Venta):* $ ${formatNumber(rates.venta)} COP\n`;
+    }
+    if (rates?.compra) {
+      msg += `💵 *Dólar Mercado (Compra):* $ ${formatNumber(rates.compra)} COP\n`;
+    }
+
+    return msg;
+  }
+
+  /**
+   * Formatea el mensaje de tasas para Argentina.
+   * 
+   * @param {Object} rates - Objeto con oficial, blue (compra/venta).
+   * @returns {string} Mensaje formateado en Markdown.
+   */
+  static formatArgentinaRates(rates) {
+    const formatNumber = (num) => {
+      if (num === null || num === undefined || isNaN(num)) return '0,00';
+      return num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    const now = new Date();
+    const rawDate = now.toLocaleDateString('es-VE', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+    const formattedDate = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
+
+    let msg = `🇦🇷 *Tasas de Cambio — Argentina*\n`;
+    msg += `🗓️ ${formattedDate}\n\n`;
+
+    if (rates?.oficialVenta || rates?.oficial) {
+      msg += `🏛️ *Dólar Oficial (Venta):* $ ${formatNumber(rates.oficialVenta || rates.oficial)} ARS\n`;
+    }
+    if (rates?.oficialCompra) {
+      msg += `🏛️ *Dólar Oficial (Compra):* $ ${formatNumber(rates.oficialCompra)} ARS\n\n`;
+    } else {
+      msg += `\n`;
+    }
+
+    if (rates?.blueVenta || rates?.blue) {
+      msg += `💵 *Dólar Blue (Venta):* $ ${formatNumber(rates.blueVenta || rates.blue)} ARS\n`;
+    }
+    if (rates?.blueCompra) {
+      msg += `💵 *Dólar Blue (Compra):* $ ${formatNumber(rates.blueCompra)} ARS\n`;
+    }
+
+    return msg;
+  }
 }
