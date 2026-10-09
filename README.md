@@ -7,22 +7,27 @@
 <a name="español"></a>
 # Español 🇪🇸
 
-**VES Tasa Monitor** es un bot de Telegram robusto y eficiente diseñado para monitorear el mercado cambiario en Venezuela. Proporciona tasas en tiempo real (USD/EUR), permite realizar conversiones precisas, generar recibos visuales, consultar datos históricos y recibir notificaciones automáticas ante cambios en la tasa oficial.
+**VES Tasa Monitor** es un bot de Telegram robusto y eficiente diseñado para monitorear el mercado cambiario en Venezuela. Proporciona tasas en tiempo real (USD/EUR), permite realizar conversiones precisas, generar recibos visuales, consultar datos históricos y recibir notificaciones automáticas ante cambios en la tasa oficial. Además, incluye herramientas complementarias para consultar y convertir divisas de **Colombia (COP)** y **Argentina (ARS)** frente al USD.
 
 📢 **Prueba el bot en vivo:** [t.me/ves_monitor_bot](https://t.me/ves_monitor_bot)
 
 ## 🚀 Características Principales
 
-- **📊 Tasas en Tiempo Real**: Consulta instantánea del valor del Dólar (BCV, USDT Binance) y Euro BCV con cálculo de brecha cambiaria.
-- **🧮 Calculadora de Divisas Inteligente**:
+- **📊 Tasas en Tiempo Real (Venezuela)**: Consulta instantánea del valor del Dólar (BCV, USDT Binance) y Euro BCV con cálculo de brecha cambiaria (`/tasa`).
+- **🌎 Tasas Internacionales Complementarias**:
+    - **🇨🇴 Colombia (`/colombia`)**: Consulta de TRM (Oficial) y Dólar Mercado (Compra y Venta).
+    - **🇦🇷 Argentina (`/argentina`)**: Consulta de Dólar Oficial y Dólar Blue (Compra y Venta).
+- **🧮 Calculadora de Divisas Multimoneda (`/convertir`)**:
     - Conversión entre VES, USD y EUR con soporte de tasas oficiales y USDT.
-    - Soporta conversiones cruzadas (ej. USD ➡️ EUR).
+    - Soporte para conversión entre Peso Colombiano (COP ↔ USD) con TRM Oficial o Mercado.
+    - Soporte para conversión entre Peso Argentino (ARS ↔ USD) con Dólar Oficial o Blue.
+    - Conversiones cruzadas (ej. USD ➡️ EUR).
     - Procesamiento flexible de números (soporta separadores de miles `.` y decimales `,`).
 - **🖼️ Generación de Recibos Visuales**: Crea imágenes profesionales (PNG) con el resultado de tus conversiones para compartir fácilmente.
-- **📅 Consulta Histórica**: Obtén los valores de cualquier fecha pasada directamente desde el bot.
-- **🔔 Notificaciones Automáticas**: Reporte matutino diario a las 7:00 AM (Caracas) y alertas en tiempo real cuando el BCV actualice su tasa oficial.
-- **🏗️ Arquitectura Modular**: Código refactorizado y desacoplado (Handlers, Services, Cron, Utils) para alta escalabilidad y fácil mantenimiento.
-- **🔋 Homelab Self-Hosted**: Optimizado para ejecución en Docker Compose con PostgreSQL nativo (bajo consumo de recursos).
+- **📅 Consulta Histórica**: Obtén los valores del Dólar BCV, USDT y Euro BCV de cualquier fecha pasada directamente desde el bot (`/historico`).
+- **🔔 Notificaciones Automáticas (Exclusivas Venezuela)**: Reporte matutino diario a las 7:00 AM (Caracas) y alertas en tiempo real cuando el BCV actualice su tasa oficial.
+- **🏗️ Arquitectura Modular**: Código desacoplado (Handlers, Services, Cron, Utils) para alta escalabilidad y fácil mantenimiento.
+- **🔋 Homelab Self-Hosted**: Optimizado para ejecución en Docker Compose con PostgreSQL 15 nativo (bajo consumo de recursos).
 
 ## 🛠️ Tecnologías Utilizadas
 
@@ -39,11 +44,11 @@ El proyecto sigue una arquitectura limpia y modular:
 
 ```text
 src/
-├── cron/       # Tareas programadas (monitoreo de cambios y reporte 7:00 AM)
+├── cron/       # Tareas programadas (monitoreo de cambios y reporte 7:00 AM Venezuela)
 ├── handlers/   # Manejadores de eventos de Telegram (comandos, acciones, texto)
 ├── services/   # Lógica de negocio (conversiones, formateo, notificaciones, tasas)
 ├── utils/      # Utilidades (ayudantes de fecha, generador de imágenes)
-├── api.js      # Cliente para la API externa de tasas
+├── api.js      # Cliente para la API externa de tasas (VE, CO, AR)
 ├── config.js   # Gestión centralizada de configuración
 ├── db.js       # Cliente y pool de conexiones PostgreSQL (pg)
 └── index.js    # Punto de entrada y configuración del bot
@@ -71,7 +76,7 @@ src/
 ## 📋 Estructura de la Base de Datos (PostgreSQL)
 
 ```sql
--- Tabla para suscriptores de alertas y reporte diario
+-- Tabla para suscriptores de alertas y reporte diario de Venezuela
 CREATE TABLE IF NOT EXISTS public.subscribers (
   chat_id BIGINT PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -98,22 +103,27 @@ Este bot es una herramienta meramente **informativa**. Los datos mostrados son o
 <a name="english"></a>
 # English 🇺🇸
 
-**VES Tasa Monitor** is a robust and efficient Telegram bot designed to monitor the exchange market in Venezuela. It provides real-time rates (USD/EUR), accurate currency conversions, visual receipt generation, historical data lookups, and automated notifications for official rate changes.
+**VES Tasa Monitor** is a robust and efficient Telegram bot designed to monitor the exchange market in Venezuela. It provides real-time rates (USD/EUR), accurate currency conversions, visual receipt generation, historical data lookups, and automated notifications for official rate changes. It also includes complementary features to query and convert rates for **Colombia (COP)** and **Argentina (ARS)** to USD.
 
 📢 **Try the bot live:** [t.me/ves_monitor_bot](https://t.me/ves_monitor_bot)
 
 ## 🚀 Key Features
 
-- **📊 Real-Time Rates**: Instant lookup for Dollar (BCV, USDT Binance) and Euro rates with exchange spread calculations.
-- **🧮 Smart Currency Calculator**:
+- **📊 Real-Time Rates (Venezuela)**: Instant lookup for Dollar (BCV, USDT Binance) and Euro rates with exchange spread calculations (`/tasa`).
+- **🌎 Complementary Regional Rates**:
+    - **🇨🇴 Colombia (`/colombia`)**: Official TRM and Market Dollar rates (Buy & Sell).
+    - **🇦🇷 Argentina (`/argentina`)**: Official Dollar and Blue Dollar rates (Buy & Sell).
+- **🧮 Multi-Currency Calculator (`/convertir`)**:
     - Conversion between VES, USD, and EUR with support for official and USDT rates.
-    - Supports cross-conversions (e.g., USD ➡️ EUR).
+    - Conversion for Colombian Peso (COP ↔ USD) using Official TRM or Market rate.
+    - Conversion for Argentine Peso (ARS ↔ USD) using Official or Blue rate.
+    - Cross-conversions (e.g., USD ➡️ EUR).
     - Flexible number processing (supports `.` thousands separators and `,` decimals).
 - **🖼️ Visual Receipt Generation**: Create professional PNG images with your conversion results for easy sharing.
-- **📅 Historical Lookup**: Get values for any past date directly from the bot.
-- **🔔 Automated Notifications**: Daily morning report at 7:00 AM (Caracas) and real-time alerts when BCV updates official rates.
+- **📅 Historical Lookup**: Get past values for BCV Dollar, USDT, and BCV Euro directly from the bot (`/historico`).
+- **🔔 Automated Notifications (Venezuela Only)**: Daily morning report at 7:00 AM (Caracas) and real-time alerts when BCV updates official rates.
 - **🏗️ Modular Architecture**: Clean decoupled architecture (Handlers, Services, Cron, Utils) for high maintainability.
-- **🔋 Homelab Self-Hosted**: Optimized for Docker Compose with native PostgreSQL.
+- **🔋 Homelab Self-Hosted**: Optimized for Docker Compose with native PostgreSQL 15.
 
 ## 🛠️ Built With
 
