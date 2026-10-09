@@ -63,18 +63,23 @@ const botCommands = [
   { command: 'help', description: 'Ayuda e información del bot' }
 ];
 
-// Lanzamiento del bot con registro de comandos y manejo de errores
-bot.launch({ dropPendingUpdates: true })
-  .then(async () => {
-    try {
-      await bot.telegram.setMyCommands(botCommands);
-      console.log('📋 Comandos del menú sincronizados con éxito en Telegram');
-    } catch (err) {
-      console.error('Aviso: no se pudieron sincronizar los comandos en Telegram:', err.message);
-    }
+// Sincronización de comandos y lanzamiento del bot
+async function startBot() {
+  try {
+    await bot.telegram.setMyCommands(botCommands);
+    console.log('📋 Comandos del menú sincronizados con éxito en Telegram');
+  } catch (err) {
+    console.error('Aviso: no se pudieron sincronizar los comandos en Telegram:', err.message);
+  }
+
+  bot.launch({ dropPendingUpdates: true }, () => {
     console.log('🚀 Bot VES Tasa Monitor en línea');
-  })
-  .catch((err) => console.error('Error crítico al iniciar el bot:', err));
+  }).catch((err) => {
+    console.error('Error crítico al iniciar el bot:', err);
+  });
+}
+
+startBot();
 
 // Configuración de apagado elegante (Graceful Shutdown)
 process.once('SIGINT', () => bot.stop('SIGINT'));
